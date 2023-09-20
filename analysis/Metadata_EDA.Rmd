@@ -1,0 +1,104 @@
+---
+title: "Metadata EDA"
+author: "Cassandra Sperow"
+date: "2023-09-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 
+
+#### How many different regions? 6
+
+#### How many different Lat/Long coordinates? 20
+
+#### How many different reefs? 19
+
+# Metadata EDA
+```{r}
+suppressMessages(library(tidyverse))
+read_delim("../data/Files/metadata") -> metadata
+
+metadata
+```
+
+- Dimensions of metadata table
+```{r}
+dim(metadata)
+```
+- Column names of metadata table
+```{r}
+names(metadata)
+```
+
+##### How many unique dates?  2 
+```{r}
+unique(metadata$Collection.date)
+```
+
+##### How many species? 2
+```{r}
+unique(metadata$Species)
+```
+
+##### How many Red Sea regions? 6 
+```{r}
+unique(metadata$Region)
+```
+
+##### How many different sample ids per reef? 19 reefs spread out amongst the 6 regions
+```{r}
+metadata %>% 
+  group_by(Region, Reef) %>% 
+  summarize(n = n())
+```
+
+
+
+##### How many unique pair of Lat/Long? 20 
+```{r}
+metadata %>% 
+  group_by(Lat, Lon) %>% 
+  summarise(n = n()) %>% 
+  arrange(-n)
+```
+
+##### Map
+- Where on a map are the samples taken from? 
+```{r}
+library(leaflet)
+library(viridis)
+
+palette_species <- colorFactor(viridis(2), metadata$Species)
+
+leaflet() %>% 
+  addProviderTiles(
+    "Esri.WorldImagery",
+    group = "Esri.WorldImagery"
+  ) %>% 
+  addMarkers(
+    data = metadata,
+    label = paste(
+      "Sample: ", metadata$Sample, "; ",
+      "Region: ", metadata$Region, "; ",
+      "Species: ", metadata$Species
+    )
+  )
+  # ) %>%
+  # addCircleMarkers(
+  #   data = metadata, 
+  #   radius = 3, 
+  #   fillOpacity = 1, 
+  #   group = "Species"
+  # )
+
+```
+
+
+```{r}
+write.csv(metadata, "../output/metadata_map.csv")
+```
+

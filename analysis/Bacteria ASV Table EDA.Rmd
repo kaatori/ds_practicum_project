@@ -1,0 +1,120 @@
+---
+title: "Bacteria ASV Table"
+author: "Cassandra Sperow"
+date: "2023-09-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
+```
+
+## 
+
+# Bacteria (ASV Table)
+
+```{r}
+read_delim("../data/Files/ASV_table") -> bacteria
+
+dim(bacteria) #  659 by 33173
+
+head(bacteria)
+```
+
+```{r}
+tail(bacteria)
+```
+
+
+```{r}
+read_delim("../data/Files/16S_tax.txt") -> bacteria_tax
+
+dim(bacteria_tax)
+```
+
+
+```{r}
+names(bacteria_tax)
+```
+
+- How many bacterial species? 226 but most ASVs have NA as species: 
+```{r}
+bacteria_tax %>% 
+  group_by(Species) %>% 
+  summarise(n = n()) %>% 
+  arrange(-n)
+```
+
+- How many different genera? 1,390 with over 16K having NA as Genus
+
+```{r}  
+bacteria_tax %>% 
+  group_by(Genus) %>%
+  summarise(n = n()) %>%
+  arrange(-n) 
+```
+
+
+```{r}
+bacteria %>% 
+  rename(sample_id = `...1`) -> bacteria
+```
+
+
+```{r}
+left_join()
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+

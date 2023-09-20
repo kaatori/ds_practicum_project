@@ -1,0 +1,296 @@
+---
+title: "Algae (ITS2) Table Exploratory Data Analysis"
+author: "Cassandra Sperow"
+date: "2023-09-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
+```
+# Questions:
+##### How many algal ITS2 types?  89
+
+##### How many coral samples? 659 
+
+##### What are distributions like per category or per variable?
+
+
+## Algae (ITS2 Table)
+- Are the coral sample IDs in rows? Yes
+- What is format of dataset? 659 by 89 where 88 columns are ITS2 IDs
+
+```{r}
+# separator is \t
+# no file extension
+read_delim("../data/Files/ITS2_table") %>% 
+   # Notice the coral sample ID has the Red Sea region acronym, reef number 
+  rename(coral_sample_id = `...1`) -> algae
+
+dim(algae) # 659  89
+
+algae
+```
+
+- Are the columns all unique? Yes, they are each an ITS2 sequence type
+- There are 89 algal ITS2 sequence types
+```{r}
+unique(names(algae))
+```
+
+### Algae Taxonomy
+#### Clade Observations
+```{r}
+read_delim("../data/Files/ITS2_tax.txt") -> al_tax
+
+al_tax # 88 by 5
+```
+
+- How many clades are there? about 5
+- Dr. C said that it would be good to do analysis based on clade level. 
+
+#### Unique clades: qty 5: **A, B, C, D, G**
+```{r}
+
+al_tax %>% 
+  group_by(Clade) %>% 
+  summarise(n = n()) ### samples per clade are not as evenly stratified
+```
+
+- how many algae species? Dr. C said not to worry about this part but there are 5 different species listed with a None value for some
+- These were a part of the findings from the published article and may not be needed
+```{r}
+al_tax %>% 
+  group_by(`Associated species`) %>% 
+  summarise(n = n())
+```
+- How many majority sequences are there: 32 different majority sequences
+```{r}
+al_tax %>% 
+  group_by(`Majority ITS2 sequence`) %>% 
+  summarise(n = n())
+```
+
+
+- Need clade attached to coral sample id
+```{r}
+# take table with coral sample IDs 
+# and pivot to where I can join based on ITS2
+# in order to get clade attached to each sample ID
+algae %>% 
+  # coral sample IDs are in 1 column
+  # pivot to where the coral samples have all of the ITS2s 
+  # it makes a lot of rows, but need this step in order to pivot again
+  pivot_longer(cols = starts_with("X")) %>% 
+  # with ITS2s now in their own column, need pivot again to get samples as headers
+  pivot_wider(names_from = coral_sample_id, 
+              values_from = value) -> algae_pv
+
+# how we have the ITS2s pivoted into one column but it still has an "X" in it
+head(algae_pv)
+```
+
+- Take out "X" in order to join by ITS2 and get clade per sample
+```{r}
+# before joining, need to make ITS2 columns the same data type
+al_tax %>% 
+  mutate(ITS2 = as.character(`ITS2 type profile UID`), 
+         .before = `ITS2 type profile UID`) -> al_tax
+
+
+algae_pv %>% 
+  # seaprating out the "X" from the code of the ITS2
+  separate(name, into = c("a", "ITS2"), sep = "X") %>% 
+  #select(`PKAU-R3-12`) # yes checks out
+  select(-a) %>% 
+  inner_join(al_tax, by = c("ITS2" = "ITS2")) -> algae_coral_clade_maj
+  # testing some of the columns to make sure they joined with correct sample ID
+  # picking 3 in the middle of one of the original files from Dr. C to test
+  # yes, these match up with picking them randomly and checking original tables. 
+ # select(`PKAU-R3-12`, `PKAU-R1-20`, `PWAJ-R2-14`, ITS2, Clade)
+
+
+```
+
+
+
+
+
+```{r}
+algae_coral_clade_maj %>% 
+  ggplot(aes(x = Clade)) +
+  geom_bar() +
+  theme_bw()
+
+
+algae_coral_clade_maj %>% 
+  ggplot(aes(x = `Majority ITS2 sequence`, color = Clade, fill = Clade)) +
+  geom_histogram(stat="count") +
+  theme_bw() +
+  ggtitle("Count of Majority ITS2 with Clade") +
+  coord_flip()
+
+```
+
+# Need to pivot back with samples as rows
+```{r}
+algae_coral_clade_maj %>% 
+  # take out associated psecies column for now
+  select(-`Associated species`) %>% 
+  # there are two ITS2 columns each of a diff data type
+  # only need the one that is numeric
+  select(-ITS2) %>% 
+  # simplify the pivot by taking out the longer profile (analysis first on clade)
+  select(-`ITS2 type profile`) %>% 
+  # simply names
+  rename(ITS2 = `ITS2 type profile UID`, 
+         Majority = `Majority ITS2 sequence`) %>% 
+  # check names
+ # names()
+  # pivot back to have samples as rows
+  pivot_longer(cols = 1:659) %>% 
+  # rename 'name' and 'value' to be clearer
+  rename(sample_id = name, 
+         its2_count = value) %>% 
+  # arrange by sample name
+  arrange(sample_id) -> algae_df
+  # # group by sample name to check info per sample
+  # group_by(name) %>% 
+  # summarize(n = n()) #%>% # yes, there are 88 ITS2 types and each sample has 88
+  # comment out grouping lines to save as new df
+
+glimpse(algae_df)
+  
+```
+
+# Compare new data frame with original for data quality check
+- randomly picking 3 sample names to check with original algae table
+```{r}
+algae_df %>% 
+ # filter(sample_id=="PDOG-R1-1") # yes, this is right
+  #filter(sample_id=="PWAJ-R3-10") # yes this is right
+  filter(sample_id=="PWAJ-R1-6") # yes, this is right
+```
+
+- Quality check per ```sample_id```
+Yes, there are 659 groups of ```sample_id```
+Yes, there are 88 unique ITS2 codes
+```{r}
+algae_df %>% 
+  group_by(sample_id) # yes 659 unique
+
+algae_df %>% 
+  group_by(ITS2) # yes 88 unique
+```
+
+```{r}
+summary(algae_df)
+```
+
+
+```{r}
+algae_df %>% 
+  arrange(-its2_count) %>% 
+  ggplot(aes(x = its2_count, y = Clade, color = Majority )) +
+  geom_point()
+
+
+ggplot(algae_df, aes(x = Majority, color = Clade, fill = Clade)) +
+  geom_histogram(stat = "count")
+
+# what if could log the counts of the majority to see its distribution?
+algae_df %>% 
+  group_by(Majority) %>% 
+  mutate(Maj_ct = n(), .after = Majority) %>% 
+  ggplot(aes(x = Maj_ct, color = Clade, fill = Clade)) +
+  geom_histogram()
+```
+
+
+
+```{r}
+plot(algae_df$its2_count)
+
+ggplot(algae_df, aes(x = 1:nrow(algae_df), y = its2_count)) +  # use nrow function to have the index values on the x axis 
+  geom_point()
+```
+
+# Need to section out the indicator for which species P or S
+# Also need to section out the region
+- This is easier than joining with metadata because sample names already have species, region, and reef
+```{r}
+algae_df %>% 
+  # extract letter P or S at beginning of sample name for which species
+  mutate(species = str_sub(sample_id, 1, 1), 
+         region = str_sub(sample_id, 2,4),
+         reef = str_sub(sample_id, 6,7)) -> algae_df
+```
+
+
+```{r}
+GGally::ggpairs(select(algae_df, -3, -4), mapping = aes(color = Clade)) -> ggpairs_color_clade
+```
+
+
+
+```{r}
+#ggpairs_color_clade
+
+ggsave("GGpairs_color_clade.png", ggpairs_color_clade, device = "png", 
+       path = "../plots")
+```
+
+
+```{r}
+GGally::ggpairs(select(algae_df, -3, -4), mapping = aes(color = species)) -> ggpairs_color_species
+```
+
+
+```{r}
+ggsave("GGpairs_color_species.png", device = "png", path = "../plots")
+```
+
+
+```{r}
+algae_df %>% 
+  ggplot(aes(x = Majority, color = Clade, fill = Clade)) +
+  geom_histogram(stat="count") +
+  theme_bw() +
+  ggtitle("Count of Majority ITS2 with Clade") +
+  coord_flip()
+```
+
+# write csv file for joining with bacteria data
+```{r}
+write_csv(algae_df, "../output/algae_df.csv")
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
