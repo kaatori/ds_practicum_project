@@ -224,12 +224,14 @@ algae_df %>%
   # extract letter P or S at beginning of sample name for which species
   mutate(species = str_sub(sample_id, 1, 1), 
          region = str_sub(sample_id, 2,4),
-         reef = str_sub(sample_id, 6,7)) -> algae_df
+         reef = str_sub(sample_id, 6,7)) %>% 
+  # ITS@ should be a categorical not a double 
+  mutate(ITS2 = as.character(ITS2))-> algae_df
 ```
 
 
 ```{r}
-GGally::ggpairs(select(algae_df, -3, -4), mapping = aes(color = Clade)) -> ggpairs_color_clade
+GGally::ggpairs(select(algae_df, -1, -3, -4), mapping = aes(color = Clade)) -> ggpairs_color_clade
 ```
 
 
@@ -243,7 +245,7 @@ ggsave("GGpairs_color_clade.png", ggpairs_color_clade, device = "png",
 
 
 ```{r}
-GGally::ggpairs(select(algae_df, -3, -4), mapping = aes(color = species)) -> ggpairs_color_species
+GGally::ggpairs(select(algae_df, -1, -3, -4), mapping = aes(color = species)) -> ggpairs_color_species
 ```
 
 
@@ -251,14 +253,24 @@ GGally::ggpairs(select(algae_df, -3, -4), mapping = aes(color = species)) -> ggp
 ggsave("GGpairs_color_species.png", device = "png", path = "../plots")
 ```
 
-
 ```{r}
 algae_df %>% 
-  ggplot(aes(x = Majority, color = Clade, fill = Clade)) +
-  geom_histogram(stat="count") +
+  group_by(Majority) %>% # 32 groups
+  ggplot(aes(y = Majority, color = Clade, fill = Clade)) +
+  geom_bar() +
+  facet_wrap(~species) +
   theme_bw() +
-  ggtitle("Count of Majority ITS2 with Clade") +
-  coord_flip()
+  ggtitle("Counts of Majority Sequence by Species & Clade", "P = P. verrucosa, S = S. pistillata")
+```
+
+```{r}
+# commenting this out because the above plot is more informative
+# algae_df %>% 
+#   ggplot(aes(x = Majority, color = Clade, fill = Clade)) +
+#   geom_histogram(stat="count") +
+#   theme_bw() +
+#   ggtitle("Count of Majority ITS2 with Clade") +
+#   coord_flip()
 ```
 
 # write csv file for joining with bacteria data
