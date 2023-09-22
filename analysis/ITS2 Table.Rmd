@@ -279,7 +279,7 @@ ggplot(algae_df, aes(x = 1:nrow(algae_df), y = log(its2_count), color = Clade)) 
   ylab("Log of ITS2 Count (Abundance)") +
   ggtitle("Scatter Plot of log(ITS2 Count) by Clade")
 ```
-- From the above, logging doesn't really seem to do much but squish the patterns that are already there, and there is no linear relationship between Clade and ITS2 count
+
 
 ### What does data frame look like if I filter out ITS2 counts that are 0?
 - Compare with similar plot
