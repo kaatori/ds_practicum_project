@@ -116,10 +116,11 @@ DOI: 10.1111/mec.16871
 ![Figure 2 from the publication at DOI: 10.1111/mec.16871 ](../images/Buitrago_Cardenas_at_al_Admixture.png)
 
 # How many different bacteria are there per sample?
-
+- Taking one random sample ID and pivoting ASV columns to see the counts in their own column
+- Created a temporary view for this sample ID of how many unique  ASVs there are. 
+- Performed this after the pivot by creating a new column with "T" if the ASV count == 0, otherwise "F" 
+- Grouped by T/F to see the count of T=zero / F=non-zero because the non-zero values indicate the unique number of ASVs for this sample
 ```{r}
-
-
 # for one random sample id: 
 bacteria %>% 
   filter(sample_id=="PDOG-R1-1") %>% 
@@ -134,15 +135,33 @@ bacteria %>%
   summarise(n = n())
 
 ```
-
-
-```{r}
-```
-
+- For the sample PDOG-R1-1, there are 203 different bacteria strains linked to this sample, 32969 bacteria strains that were not found in this sample. (32969 + 203 = 33172)
 
 ```{r}
+32969 + 203
 ```
 
+## Extend the above method to the entire table to see which samples may have fewer than 3 bacteria strains in that sample in order to filter out some data for manageability. 
+```{r}
+bacteria %>% 
+  # begin pivot for all samples to switch ASV columns into one long column with its ASV name and its corresponding abundance counts all in one other column
+  # this will create a very long data frame but is needed to see the zero vs non-zero counts
+  pivot_longer(cols = starts_with("ASV"), 
+               names_to = "ASV", 
+               values_to = "count_ASV") %>% 
+  # creating new column for simple grouping
+  mutate(zero = ifelse(count_ASV==0, "T", "F")) %>% 
+  # before had only pivoted for one sample but below will group by sample and zero or not
+  group_by(sample_id, zero) %>% 
+  summarise(n = n()) %>% # yes, 1,318 groups is 659 x 2 for T/F in each
+  # order by n to see which samples have the most T=zero counts
+  arrange(-n)
+```
+- Many coral samples have at least 33K count values of 0 which means for example, coral sample id PKAU-R1-38 has 33158 ASVs of 0 count. This means 15 bacteria were found in this sample. 
+- vs
+- Sample id PWAJ-R1-33 has 174 ASV counts of greater than 0. This means that 33,173 - 174 = 32,999 bacteria were found in this sample. 
+
+- **What should be threshold since the least amount of bacteria strains is 15 and the most is 32,999?**
 
 ```{r}
 ```
