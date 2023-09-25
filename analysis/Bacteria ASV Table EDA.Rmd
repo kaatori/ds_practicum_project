@@ -73,12 +73,19 @@ bacteria_tax %>%
   arrange(-n) 
 ```
 
-## What about Order? Are there any NAs?
+## What about Order? 
+- Are there any NAs? No, this is good. 
+- Order is the level with no NA or None values, such that if the analysis was done on this higher level, none of the outputs or clusters would be NA or None, depending on what level is needed from Dr. Cárdenas. 
 - There are 308 Orders without any NA values
 ```{r}
 bacteria_tax %>% 
   group_by(Order) %>% 
-  summarise(n = n())
+  summarise(n = n()) %>% 
+  arrange(-n)
+
+
+bacteria_tax %>% 
+  filter(Order=="Flavobacteriales")
 ```
 
 
@@ -87,10 +94,10 @@ bacteria %>%
   rename(sample_id = `...1`) -> bacteria
 ```
 
-## ASV0001 EDA
+## Distribution Plots for Bacteria ASV EDA
 ```{r}
-# column to be explored
-bacteria$ASV0001
+# take one ASV to be explored
+#bacteria$ASV0001
 
 # overview stats of ASV0001 counts (abundance)
 summary(bacteria$ASV0001)
@@ -103,17 +110,47 @@ plot(bacteria$ASV0001)
 
 - The published work from March 2023 (insert link) has the below vizualization with a focus on the top 20 bacterial strains in order of abundance. The ASV numbers indicate the top 20 such that ASV001 - ASC0020 are the ones pictured in the Admixture analysis. 
 
-```{r}
-names(bacteria[1:21])
-```
-
-### Admixture Analysis from Buitrago-López and Cárdenas, et al
+#### Figure:  Admixture Analysis from Buitrago-López and Cárdenas, et al (2023)
 
 Citation: 
 
 DOI: 10.1111/mec.16871 
 
 ![Figure 2 from the publication at DOI: 10.1111/mec.16871 ](../images/Buitrago_Cardenas_at_al_Admixture.png)
+
+
+
+```{r}
+# obtain top 20 names per the March publication
+top_20_asv <- names(bacteria[2:21]) %>% as_vector()
+
+bacteria %>% 
+  # only need Top 20 to see quick distribution of each
+  select(top_20_asv) %>% 
+  map(., ~plot(.))
+
+
+bacteria %>% 
+  # only need Top 20 to see quick distribution of each
+  select(top_20_asv[1:10]) %>% 
+  GGally::ggpairs() -> ggpairs_top_10_asv
+
+bacteria %>% 
+  # only need Top 20 to see quick distribution of each
+  select(top_20_asv[11:20]) %>% 
+  GGally::ggpairs() -> ggpairs_top_11_20_asv
+```
+
+
+```{r}
+ggsave("ggpairs_top_10_asv.png", ggpairs_top_10_asv, device = "png", path = "../plots")
+
+
+ggsave("ggpairs_top_11_20_asv.png", ggpairs_top_11_20_asv, device = "png", path = "../plots")
+```
+
+
+
 
 # How many different bacteria are there per sample?
 - Taking one random sample ID and pivoting ASV columns to see the counts in their own column
@@ -155,35 +192,97 @@ bacteria %>%
   group_by(sample_id, zero) %>% 
   summarise(n = n()) %>% # yes, 1,318 groups is 659 x 2 for T/F in each
   # order by n to see which samples have the most T=zero counts
-  arrange(-n)
+  arrange(-n) -> unique_bacteria_counts_per_sample
+
+unique_bacteria_counts_per_sample %>% 
+  arrange(sample_id) %>% 
+  
 ```
 - Many coral samples have at least 33K count values of 0 which means for example, coral sample id PKAU-R1-38 has 33158 ASVs of 0 count. This means 15 bacteria were found in this sample. 
 - vs
 - Sample id PWAJ-R1-33 has 174 ASV counts of greater than 0. This means that 33,173 - 174 = 32,999 bacteria were found in this sample. 
 
-- **What should be threshold since the least amount of bacteria strains is 15 and the most is 32,999?**
+#### **What should be threshold since the least amount of bacteria strains is 15 and the most is 32,999?**
+- It may be that the filtering is done on the side of the algae clade or that the client decides otherwise. 
+- How to show the distribution of zero vs non-zero values for ASV count?
+
+## Distributios
+- Simple plots of the ranges of unique ASV counts are hard to visualize because the scale is so vast from around 170 up to over 33K. 
+```{r}
+# simple base R plot
+plot(unique_bacteria_counts_per_sample$n)
+
+theme_set(theme_bw())
+unique_bacteria_counts_per_sample %>% 
+  ggplot(aes(x = n, fill = sample_id)) +
+  geom_histogram(show.legend = F)
+```
+
+- The above is not really telling me anything. I need to section out by T and F to see the distributions of ASV unique values
 
 ```{r}
+unique_bacteria_counts_per_sample %>% 
+  filter(zero=="F") %>%  # F group means ASV count was greater than 0
+  ggplot(aes(x = n)) + 
+  geom_histogram(show.legend = F) +
+  ggtitle("Historgram Distribution of How Many Unique ASVs", "per Coral Sample ID")
+```
+
+- Observation:  Most of the coral samples have at least 45-50 different bacteria, and many have at least 75.
+
+```{r}
+
+unique_bacteria_counts_per_sample %>% 
+  ungroup() %>% 
+  filter(zero=="F") %>%  # F group means ASV count was greater than 0
+  # calculate mean of unique ASVs to have text on boxplot
+  mutate(mean_n = mean(n)) %>% 
+  ggplot(aes(x = n, y = zero)) + 
+  xlab("Unique ASVs per Sample ID") +
+  geom_boxplot(show.legend = F) +
+  stat_summary(fun.y=mean, geom="point", shape=20, size=5, color="red", fill="red") +
+  ggtitle("Boxplot Distribution of How Many Unique ASVs ", "Average per Coral Sample ID: 204") 
+  
+  
 ```
 
 
 ```{r}
+unique_bacteria_counts_per_sample %>% 
+  ungroup() %>% 
+  filter(zero=="F") %>% 
+  summary()
 ```
 
 
 ```{r}
+unique_bacteria_counts_per_sample %>% 
+  ungroup() %>% # grouping doesn't matter for graphing
+  filter(zero=="T") %>%  # T group means ASV count was 0
+  ggplot(aes(x = n)) + 
+  geom_histogram(show.legend = F) +
+  ggtitle("Historgram Distribution of How Many 0 Counts for ASV", "per Coral Sample ID")
 ```
 
 
 ```{r}
+unique_bacteria_counts_per_sample %>% 
+  ungroup() %>% 
+  filter(zero=="T") %>%  
+  mutate(mean_n = mean(n)) %>% 
+  ggplot(aes(x = n, y = zero)) + 
+  xlab("Count of 0 for ASV per Sample ID") +
+  geom_boxplot(show.legend = F) +
+  stat_summary(fun.y=mean, geom="point", shape=20, size=5, color="orange", fill="orange") +
+  ggtitle("Boxplot Distribution of How Many 0 Counts of ASV", "Average per Coral Sample ID: ______") 
 ```
 
 
 ```{r}
-```
-
-
-```{r}
+unique_bacteria_counts_per_sample %>% 
+  ungroup() %>% 
+  filter(zero=="T") %>% 
+  summary()
 ```
 
 
