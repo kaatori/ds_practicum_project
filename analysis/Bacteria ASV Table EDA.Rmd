@@ -124,24 +124,26 @@ DOI: 10.1111/mec.16871
 # obtain top 20 names per the March publication
 top_20_asv <- names(bacteria[2:21]) %>% as_vector()
 
+# map through the top 20 ASVs to see quick plots
 bacteria %>% 
   # only need Top 20 to see quick distribution of each
   select(top_20_asv) %>% 
   map(., ~plot(.))
 
-
+# obtain more substantial "at-a-glance" plots for ASVs 1-10 to view correlations
 bacteria %>% 
   # only need Top 20 to see quick distribution of each
   select(top_20_asv[1:10]) %>% 
   GGally::ggpairs() -> ggpairs_top_10_asv
 
+# obtain more substantial "at-a-glance" plots for ASVs 11-20 to view correlations
 bacteria %>% 
   # only need Top 20 to see quick distribution of each
   select(top_20_asv[11:20]) %>% 
   GGally::ggpairs() -> ggpairs_top_11_20_asv
 ```
 
-
+- Save the plots generated above to view as larger plot images
 ```{r}
 ggsave("ggpairs_top_10_asv.png", ggpairs_top_10_asv, device = "png", path = "../plots")
 
@@ -187,7 +189,7 @@ bacteria %>%
                names_to = "ASV", 
                values_to = "count_ASV") %>% 
   # creating new column for simple grouping
-  mutate(zero = ifelse(count_ASV==0, "T", "F")) %>% 
+  mutate(zero = ifelse(count_ASV==0, "T", "F")) %>% # 21,860,348 rows
   # before had only pivoted for one sample but below will group by sample and zero or not
   group_by(sample_id, zero) %>% 
   summarise(n = n()) %>% # yes, 1,318 groups is 659 x 2 for T/F in each
@@ -195,7 +197,7 @@ bacteria %>%
   arrange(-n) -> unique_bacteria_counts_per_sample
 
 unique_bacteria_counts_per_sample %>% 
-  arrange(sample_id) %>% 
+  arrange(sample_id)
   
 ```
 - Many coral samples have at least 33K count values of 0 which means for example, coral sample id PKAU-R1-38 has 33158 ASVs of 0 count. This means 15 bacteria were found in this sample. 
