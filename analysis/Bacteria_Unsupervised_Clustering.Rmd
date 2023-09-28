@@ -13,7 +13,13 @@ suppressMessages(library(tidyverse))
 
 ```
 
-# Unsupervised Methods
+# Unsupervised Clustering of Bacteria 
+
+Goal:  Find groups (i.e., essentially networks) of bacteria that tend to be found within each sample. Use these to see if 33K bacteria features can be paired down. 
+
+Method 1: Clustering
+
+Method 2: PCA
 
 ### Read in bacteria data
 ```{r}
@@ -45,6 +51,7 @@ top_10_df
 sum(is.na(top_10_df))
 ```
 
+### Scale the top 10 subset of data
 ```{r}
 top_10_df[,-1] %>% scale() -> scaled_data
 
@@ -56,14 +63,38 @@ head(scaled_data)
 
 - The below test runs with selecting top 10 ASVs because they have the highest abundance counts and probably least amount of zeros. 
 ```{r}
-
+# guessing 5 clusters because there are 10 ASVs
 kmeans(scaled_data, centers = 5) -> km10_cen5
 
 km10_cen5
+summary(km10_cen5)
+#km10_cen5 %>% broom::tidy()
 
-km10_cen5 %>% broom::tidy()
+km10_cen5$cluster # this is results of cluster assignment 
 
+# use the cluster vector and append to test subset
+# also need to put back the sample id column that was not needed for K-means
+bind_cols(
+scaled_data, # original used to run kmeans
+cluster = km10_cen5$cluster, # kmeans cluster assignment
+sample_id = top_10_df$sample_id # orignal sample id column
+) -> results
+
+
+# examine cluster assignment groups 
+results %>% 
+  group_by(cluster) %>% 
+  summarise(n = n())
+
+
+# verify cluster assignment groups with kmeans results of size
+km10_cen5$size
 ```
+
+
+
+
+
 ```{r}
 start_time <- Sys.time()
 # this should also work to find optimal k in reduced dataset:
