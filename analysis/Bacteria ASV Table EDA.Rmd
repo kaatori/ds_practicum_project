@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 suppressMessages(library(tidyverse))
+setwd("/Users/kasan/AU My Drive/001__DATA_793/R_dir_Corals_")
 ```
 
 
@@ -287,12 +288,44 @@ unique_bacteria_counts_per_sample %>%
   summary()
 ```
 
+## Bacteria ASV Correlations
 
 ```{r}
+# read in data if starting from here later
+suppressMessages(library(tidyverse))
+
+read_delim("../data/Files/ASV_table") %>% 
+  rename(sample_id = `...1`) -> bacteria
+
+head(bacteria)
+
 ```
 
 
 ```{r}
+# perform summary stats without sample id column
+summary(bacteria[,-1]) -> summ_bac
+
+summ_bac %>% typeof() # character
+
+summ_bac[1:20]
+length(summ_bac)
+
+# convert summary character object to dataframe
+as.data.frame(summ_bac) -> summ_bac_df
+```
+
+
+```{r}
+bacteria %>%
+  # take out sample id column
+  # test on first 5 ASVs
+  select(2:6) %>% 
+  cor() -> cor_bacteria
+
+head(cor_bacteria)
+
+cor_bacteria %>% as.data.frame
 ```
 
 

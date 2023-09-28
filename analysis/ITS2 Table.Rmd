@@ -356,8 +356,17 @@ write_csv(algae_df, "../output/algae_df.csv")
 
 
 
-
+# Filtering out ITS2 counts that are 0
+- And regraphing to get a quick snapshot since distributions where skewed with so many 0 counts
 ```{r}
+algae_df %>% 
+  filter(its2_count >0) %>% 
+  # checking to see how many samples
+  group_by(sample_id) %>% # 658 down 1 from 659
+  ungroup() -> algae_df_no_
+  # redoing plot of the 'quick snapshot' with ggpairs to see distributions
+  GGally::ggpairs(columns = c(2, 5, 6,7), 
+                  mapping = aes(color = species))
 ```
 
 

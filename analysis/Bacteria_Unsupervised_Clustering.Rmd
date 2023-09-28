@@ -1,0 +1,302 @@
+---
+title: "Bacteria Unsupervised Clustering"
+author: "Cassandra Sperow"
+date: "2023-09-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stats)
+setwd("/Users/kasan/AU My Drive/001__DATA_793/R_dir_Corals_")
+suppressMessages(library(tidyverse))
+
+```
+
+# Unsupervised Methods
+
+### Read in bacteria data
+```{r}
+
+read_delim("../data/Files/ASV_table") %>% 
+  rename(sample_id = `...1`) -> bacteria
+
+head(bacteria)
+```
+
+## K-Means
+
+Documentation for ```stats::kmeans()```
+https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/kmeans
+
+```{r}
+# experiment with partial dataset because of how long it's taking and the errors of NA/NaN/Inf
+
+set.seed(123)
+bacteria %>% 
+  slice_sample(n=300) %>% 
+  select(1:11) -> top_10_df
+
+top_10_df
+```
+- kmeans cannot take NA or Inf values
+- there are no NA or Inf values at this time in data frame
+```{r}
+sum(is.na(top_10_df))
+```
+
+```{r}
+top_10_df[,-1] %>% scale() -> scaled_data
+
+head(scaled_data)
+```
+
+
+# Test K-means
+
+- The below test runs with selecting top 10 ASVs because they have the highest abundance counts and probably least amount of zeros. 
+```{r}
+
+kmeans(scaled_data, centers = 5) -> km10_cen5
+
+km10_cen5
+
+km10_cen5 %>% broom::tidy()
+
+```
+```{r}
+start_time <- Sys.time()
+# this should also work to find optimal k in reduced dataset:
+k <- seq(2:50)
+r2 <- vector("double", length = length(k))
+
+for (i in seq_along(k)){
+  set.seed(123)
+  tempk <- kmeans(top_10_df[,-1], k[i])
+  r2[i] <- tempk$betweenss/tempk$totss
+}
+
+
+
+end_time <- Sys.time()
+
+end_time - start_time
+
+
+```
+
+```{r}
+plot(k, r2, main = "Finding Optimal K clusters")
+
+plot(k[1:10], r2[1:10], main = "Close-up of 1-10 K vs. R2")
+```
+
+#### Interpretation: The optimal k for the test set of first 10 ASVs seems to be at around k = 4 or k = 5 on x-axis. 
+- We need the elbow point at which we are optimizing the number of clusters with the R2, but the leveling off as k reaches 10 indicates that the gains with one more cluster would not be worth it. 
+- This means to choose k=4 as the main elbow point for the clusters of the Top 10 ASVs
+```{r}
+kmeans(top_10_df[,-1], 4) -> km10_cen4
+
+km10_cen4
+
+
+```
+https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/kmeans
+
+```{r}
+library("factoextra")
+fviz_cluster(km10_cen4, data = top_10_df[,-1], 
+             ggtheme = theme_bw(), 
+             main = "Cluster Plot of km10_cen4")
+```
+
+
+```{r}
+head(scaled_data)
+dim(scaled_data) # 300 x 10
+
+# try the above with scaled data and see what happens
+k <- seq(2:50)
+r2 <- vector("double", length = length(k))
+
+for (i in seq_along(k)){
+  set.seed(123)
+  tempk <- kmeans(scaled_data, k[i])
+  r2[i] <- tempk$betweenss/tempk$totss
+}
+```
+
+```{r}
+plot(k, r2)
+plot(k[1:10], r2[1:10])
+```
+
+- For the scaled data of the first top 10 ASVs, there is less of a clear 'elbow' but it still seems to be at least 4 groups to maybe 8 groups because the slope of k=4 and k=8 look very similar such that increasing to 8 may not be bad. 
+
+```{r}
+kmeans(scaled_data, centers = 4) -> km_scaled_4
+kmeans(scaled_data, centers = 8) -> km_scaled_8
+```
+
+
+```{r}
+fviz_cluster(km_scaled_4, data = scaled_data, 
+             ggtheme = theme_bw(), 
+             main = "Cluster Plot of km_scaled_4")
+
+
+fviz_cluster(km_scaled_8, data = scaled_data, 
+             ggtheme = theme_bw(), 
+             main = "Cluster Plot of km_scaled_8")
+```
+
+- The above plots indicate that k=4 vs k=8 does not make a huge difference as they're explaining same amount of % (?)
+
+### NbClust
+```{r}
+library(NbClust)
+NbClust(distance = "euclidean", 
+        data = top_10_df[,-1], 
+        method = "complete",
+        min.nc = 4, 
+        max.nc = 8,
+        index = "all") -> nb_4_8
+
+#library(factoextra)
+#fviz_nbclust(nb_4_8)
+
+### run again iwth scaled data
+NbClust(distance = "euclidean", 
+        data = scaled_data, 
+        method = "complete",
+        min.nc = 4, 
+        max.nc = 8,
+        index = "all") -> scaled_nbc
+
+#library(factoextra)
+#fviz_nbclust(scaled_nbc)
+```
+
+```{r}
+# before I had run this with scaled data and it gave an error of Inf/nan foreign object
+kmeans(bacteria[,-1], centers = 100) -> km100
+```
+
+```{r}
+
+```
+
+
+- The below is too much
+- It ran for a very long time and errored out 
+```{r}
+
+# k <- seq(2:700)
+# r2 <- vector("double", length = length(k))
+# 
+# for (i in seq_along(k)){
+#   set.seed(123)
+#   tempk <- kmeans(bacteria[,-1], k[i])
+#   r2[i] <- tempk$betweenss/tempk$totss
+# }
+# plot(k, r2)
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+## Hierarchical
+
+- From Ressler Notes: 
+
+"Build an upside-down tree starting with 
+ leaves and work our way up to build a hierarchy of similar observations within clusters.
+
+We have to make two choices
+
+A measure for distance, here we are using the L2
+ Norm but others are possible
+A method for determining the “linkage” between the clusters so we can calculate their “dissimilarity”.
+Four common linkages: Complete, Single, Average, and Centroid of which Average and Complete are generally preferred.
+There are many others.
+The linkage can affect the shape of the clusters in p-dimensional 
+ space."
+
+```{r}
+hclust(dist(scaled_data), method = "complete") -> hc1
+```
+
+
+```{r}
+plot(hc1)
+```
+
+
+```{r}
+hc2 <-cutree(hc1, k=5)
+hc2
+table(hc2)
+```
+
+```{r}
+
+scaled_data[hc2 == 2,] %>% length()
+
+scaled_data[hc2 == 5,] %>% length()
+
+```
+
+
+
+```{r}
+
+plot(hc2)
+
+hc2 %>% typeof
+```
+
+### Centroid
+```{r}
+HCC <- hclust(dist(scaled_data), method = "centroid")
+plot(HCC)
+```
+
+```{r}
+HCC5 <- cutree(HCC, 5)
+table(HCC5)
+```
+
+
+```{r}
+HCC5[HCC5 >= 4]
+```
+
+```{r}
+data.frame(hc2, HCC5)
+```
+
+
+
+
