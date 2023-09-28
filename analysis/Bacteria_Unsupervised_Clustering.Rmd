@@ -61,7 +61,10 @@ head(scaled_data)
 
 # Test K-means
 
+- Documentation: https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/kmeans
+
 - The below test runs with selecting top 10 ASVs because they have the highest abundance counts and probably least amount of zeros. 
+- Using scaled data
 ```{r}
 # guessing 5 clusters because there are 10 ASVs
 kmeans(scaled_data, centers = 5) -> km10_cen5
@@ -103,7 +106,7 @@ r2 <- vector("double", length = length(k))
 
 for (i in seq_along(k)){
   set.seed(123)
-  tempk <- kmeans(top_10_df[,-1], k[i])
+  tempk <- kmeans(scaled_data, k[i])
   r2[i] <- tempk$betweenss/tempk$totss
 }
 
@@ -117,52 +120,44 @@ end_time - start_time
 ```
 
 ```{r}
-plot(k, r2, main = "Finding Optimal K clusters")
+plot(k, r2, main = "Finding Optimal K clusters in Scaled Test 300 x 10")
 
 plot(k[1:10], r2[1:10], main = "Close-up of 1-10 K vs. R2")
 ```
 
 #### Interpretation: The optimal k for the test set of first 10 ASVs seems to be at around k = 4 or k = 5 on x-axis. 
-- We need the elbow point at which we are optimizing the number of clusters with the R2, but the leveling off as k reaches 10 indicates that the gains with one more cluster would not be worth it. 
-- This means to choose k=4 as the main elbow point for the clusters of the Top 10 ASVs
+
+- This R2 is un-adjusted per Ressler STAT 627 notes on this method. 
+
+- Increasing k will always increase R2, but do not want to introduce bias just for only a little gain. This is where the plot begins to plateau such that there is little gain in R2 as k increases. This means there is potential bias and we would like a k value at the 'knee' in the plot which is around k=4. 
+
+- The 'knee' point means that k=4 is a possible optimized number of clusters according to the R2, but the leveling off as k reaches 7-10 indicates that the gains with one more cluster are possibly not worth it, but we can also estimate k other ways.
+
+- For now, experiment with 4.
+
 ```{r}
-kmeans(top_10_df[,-1], 4) -> km10_cen4
+# use scaled data test df of 300 x 10
+# default is algorithm of Hartigan and Wong (1979)
+#set.seed(123) # this is because of nstart
+kmeans(scaled_data, 4) -> km10_cen4
 
-km10_cen4
-
-
+km10_cen4$size
 ```
-https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/kmeans
+- Re-running it is giving different sizes per cluster
+- It fluctuates a lot and it needs to be more stable without setting the seed. Right???
+- Re-running above and the re-plotting is giving different cluster assignments - seems unstable. 
+- If I set the seed at 123, it will give same results but since they're randomly variable, would the results I get be dependable?
+- The basic shapes in the plot are consistent, but it's just the size of each cluster
+- maybe k is not optimized at 4. 
 
 ```{r}
 library("factoextra")
-fviz_cluster(km10_cen4, data = top_10_df[,-1], 
+fviz_cluster(km10_cen4, data = scaled_data, 
              ggtheme = theme_bw(), 
-             main = "Cluster Plot of km10_cen4")
+             main = "Cluster Plot of km10_cen4 \nTest DF 300 samples x Top 10 ASVs")
 ```
 
 
-```{r}
-head(scaled_data)
-dim(scaled_data) # 300 x 10
-
-# try the above with scaled data and see what happens
-k <- seq(2:50)
-r2 <- vector("double", length = length(k))
-
-for (i in seq_along(k)){
-  set.seed(123)
-  tempk <- kmeans(scaled_data, k[i])
-  r2[i] <- tempk$betweenss/tempk$totss
-}
-```
-
-```{r}
-plot(k, r2)
-plot(k[1:10], r2[1:10])
-```
-
-- For the scaled data of the first top 10 ASVs, there is less of a clear 'elbow' but it still seems to be at least 4 groups to maybe 8 groups because the slope of k=4 and k=8 look very similar such that increasing to 8 may not be bad. 
 
 ```{r}
 kmeans(scaled_data, centers = 4) -> km_scaled_4
