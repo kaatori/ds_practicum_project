@@ -306,26 +306,38 @@ head(bacteria)
 # perform summary stats without sample id column
 summary(bacteria[,-1]) -> summ_bac
 
+# what is data type of summary object?
 summ_bac %>% typeof() # character
 
-summ_bac[1:20]
+# what is length since columns are 33K?
 length(summ_bac)
+
+# showing first 20
+summ_bac[1:20]
+
 
 # convert summary character object to dataframe
 as.data.frame(summ_bac) -> summ_bac_df
+
+# what are the means and medians of each ASV count?
+# this is without taking out 0 counts
+summ_bac_df %>% 
+  group_by(Var2) %>% # yes 33,172 asvs
+  ungroup() %>% 
+  filter(str_detect(Freq, "Mean|Median"))
 ```
 
-
+- Might need the correlations in a dataframe for later:
 ```{r}
 bacteria %>%
   # take out sample id column
-  # test on first 5 ASVs
-  select(2:6) %>% 
-  cor() -> cor_bacteria
+  select(-1) %>% 
+  cor() %>% 
+  as.data.frame -> cor_bacteria_df
 
-head(cor_bacteria)
+head(cor_bacteria_df)
 
-cor_bacteria %>% as.data.frame
+dim(cor_bacteria_df)
 ```
 
 

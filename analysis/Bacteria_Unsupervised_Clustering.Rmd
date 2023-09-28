@@ -281,6 +281,22 @@ hc2 %>% typeof
 ```{r}
 HCC <- hclust(dist(scaled_data), method = "centroid")
 plot(HCC)
+class(HCC)
+
+fviz_dend(HCC, rect = TRUE, cex = 0.5,
+          k_colors = c("#00AFBB","#2E9FDF", "#E7B800", "#FC4E07"))
+
+summary(HCC)
+
+HCC$order
+```
+
+```{r}
+plot(HCC)
+library(dendextend)
+png("../plots/den.png")
+plot(HCC)
+dev.off()
 ```
 
 ```{r}
@@ -296,7 +312,20 @@ HCC5[HCC5 >= 4]
 ```{r}
 data.frame(hc2, HCC5)
 ```
+```{r}
+library(dendextend)
+avg_dend_obj <- as.dendrogram(HCC)
+avg_col_dend <- color_branches(avg_dend_obj, h = 3)
+plot(avg_col_dend)
+```
+```{r}
+
+scaled_data %>% 
+  as_tibble() %>% 
+  mutate(cluster = HCC) %>% 
+  group_by(cluster)
+```
 
 
-
+https://rpkgs.datanovia.com/factoextra/
 
