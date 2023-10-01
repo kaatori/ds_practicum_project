@@ -381,7 +381,7 @@ map(bacteria[,-1], ~sum(.==0)) %>% as_tibble() %>%
   pivot_longer(cols = everything(), 
                names_to = "ASV_column", 
                values_to = "sum_col_eq_0") %>% 
-  # if the cut off includes 656 or more
+  # cut off includes 656 or more because 659-656 = 3 
   filter(sum_col_eq_0 >=656) -> ASV_cols_sum_eq_0
 
 ASV_cols_sum_eq_0
@@ -391,11 +391,13 @@ map(bacteria[,-1], ~sum(.==0)) %>% as_tibble() %>%
   pivot_longer(cols = everything(), 
                names_to = "ASV_column", 
                values_to = "sum_col_eq_0") %>% 
-  filter(sum_col_eq_0 >= 657) -> ASV_cols_sum_eq_0_657# because we want 656 to say: 656 zeros means that ASV was found in 3 samples. 
+  filter(sum_col_eq_0 >= 657) -> ASV_cols_sum_eq_0_657# because we want at least 3. 
+# 657 means that there were only two samples, so
 
 ASV_cols_sum_eq_0_657 # ASVs found in at least 3 samples
 ```
 - There are 28,733 ASVs with at least 656 zero values for their columns. 
+
 - There are 27,283 ASVs with at least 657 zero values for their columns. 
 
 - Check the above counts of 0 values with a few ASV columns:
@@ -421,9 +423,11 @@ bacteria %>%
 
 
 ```
-
-- The above list of 27,283 ASVs will be presented to Dr. Cárdenas for filtering out. 
-- Save list of the ASV column names for later: 
+- We wnat to keep the situations like ASV0212 where it was found in 3 samples. 
+- We can filter out the situtations like ASV0864 and ASV11284 where they were only found in two or fewer samples (ie 657 zeros or greater).
+- This means that the list of ASVs with 657 or more zeros in their respective columns may be filtered out of the original 33K. 
+- This amounts to 27,283 ASVs, and will be presented to Dr. Cárdenas as those to confirm should be filtered out. 
+- Save this list of 27,283 ASV column names for later: 
 ```{r}
 ASV_cols_sum_eq_0_657$ASV_column -> list_ASV_657
 
@@ -447,7 +451,19 @@ rev_bacteria
 write_csv(rev_bacteria, "../output/rev_bacteria.csv")
 ```
 
+- Quality Check:
+- The new data frame's columns should have no more than 656 zero values
+
 ```{r}
+rev_bacteria[,-1] %>% 
+  # use map() again to count the number of times the column has 0
+  map(., ~sum(.==0)) %>% 
+  # convert into data frame for easier viewing
+  as.data.frame() %>% 
+  # transpose to get list of numbers in one column & convert to df
+  t() %>% as.data.frame() %>% 
+  # check max
+  summary(V1)
 ```
 
 

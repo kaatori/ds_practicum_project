@@ -41,6 +41,7 @@ summary(pca_out) -> pca_out_summary
 glimpse(pca_out_summary)
 ```
 - From the summary of the PCA results, the output is hard to read because there are 659 samples. 
+- Need to review the 'importance' part of the summary results:
 ```{r}
 # glimpsing the nested df of the importances from the summary()
 pca_out_summary$importance %>% glimpse()
@@ -64,27 +65,51 @@ importance_df %>%
   # pivoting data drame so that cumulatives are in column
   t() %>%  as.data.frame() %>% 
   # moving up top row as column header
-  janitor::row_to_names(1) %>% 
+  janitor::row_to_names(1) %>% ######## snapshot here for presentation
   # filtering cumulative proportion column for greater > = 80 %
   filter(`Cumulative Proportion` >= 0.8)
 
 ```
 - About 239 principal components explain 80 % of cumulative variance in the X matrix of only the 5K bacteria
 
-- Which ASVs are they?
+- The number of principal components may be used as the number of ```k``` clusters to look for in K-Means clustering: 
 
 ```{r}
-pca_out$x[,1:239]
+
 ```
 
 
 
 ```{r}
 screeplot(pca_out)
+plot(pca_out)
+```
+
+```{r}
+biplot(pca_out, 
+       expand = 10,
+      # xlim = c(-0.02, 0.02), ylim = c(-0.01, 0.01)
+       )
 ```
 
 
+```{r}
+factoextra::fviz_pca_biplot(pca_out, repel = T, 
+                            alpha.var = 0.5,
+                            select.var = list(contrib = 5), # top 5 contributors are blue arrows in the plot amongst others
+                            xlim = c(-100, 300), 
+                          #  ylim = c(),
+                            xlabs=rep("*", nrow(rev_bacteria))
+)
+```
+- Obtain simpler plot of first 2 components using indexing from 'x' in pca_out object:
+```{r}
+# pch argument is for making points not regular viz from pca object
+plot(pca_out$x[,1:2], pch=20)
+```
 
-
+```{r}
+map(pca_out$x, ~plot(.))
+```
 
 
