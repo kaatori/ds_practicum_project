@@ -16,10 +16,7 @@ suppressMessages(library(tidyverse))
 # Unsupervised Clustering of Bacteria 
 
 Goal:  Find groups (i.e., essentially networks) of bacteria that tend to be found within each sample. Use these to see if 33K bacteria features can be paired down. 
-
-Method 1: Clustering
-
-Method 2: PCA
+- Reduce the dimensionality of the 33K bacteria strains
 
 ### Read in bacteria data
 ```{r}
@@ -30,7 +27,33 @@ read_delim("../data/Files/ASV_table") %>%
 head(bacteria)
 ```
 
-## K-Means
+## Method 1: PCA
+
+Documentation: https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/prcomp
+
+```{r}
+# Using the scaled data gave the following error
+# Error in svd(x, nu = 0, nv = k) : infinite or missing values in 'x'
+#stats::prcomp(bac_sc) -> prcomp_results
+
+# Using the regular df unscaled
+stats::prcomp(bacteria[,-1]) -> prcomp_results
+```
+
+```{r}
+summary(prcomp_results)
+
+typeof(prcomp_results) # list object therefore I can use map
+
+map(prcomp_results, ~as.data.frame(.))
+```
+
+```{r}
+plot(prcomp_results)
+```
+
+
+## Method 2: K-Means
 
 Documentation for ```stats::kmeans()```
 https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/kmeans
@@ -160,10 +183,15 @@ fviz_cluster(km10_cen4, data = scaled_data,
 
 
 ```{r}
-kmeans(scaled_data, centers = 4) -> km_scaled_4
+# trying with 8 to see if the re-running of the algorithm gives highly variable results or seems more stable
 kmeans(scaled_data, centers = 8) -> km_scaled_8
-```
 
+km10_cen4$size
+km_scaled_8$size
+```
+- Yes, after re-running with 8 clusters, seems to produce a lot of variable results with some group sizes fluctuating between 100 and 30s. 
+
+- It may also mean that K-Means is not a good method, although I haven't tried to change the centroid to average or use other paramters as much. 
 
 ```{r}
 fviz_cluster(km_scaled_4, data = scaled_data, 
@@ -176,7 +204,28 @@ fviz_cluster(km_scaled_8, data = scaled_data,
              main = "Cluster Plot of km_scaled_8")
 ```
 
-- The above plots indicate that k=4 vs k=8 does not make a huge difference as they're explaining same amount of % (?)
+
+
+### Not sure if I should try and run it on whole dataset and see if it also re-generates drastically different sizes each time. 
+
+```{r}
+scale(bacteria[,-1]) %>% 
+  as.data.frame() -> bac_sc
+```
+
+```{r}
+# try 20 centers bc there are top 20 ASVs on March 2023 publication
+# kmeans(bac_sc, centers = 20)
+```
+
+
+
+
+
+
+
+
+
 
 ### NbClust
 ```{r}
@@ -191,7 +240,7 @@ NbClust(distance = "euclidean",
 #library(factoextra)
 #fviz_nbclust(nb_4_8)
 
-### run again iwth scaled data
+### run again with scaled data
 NbClust(distance = "euclidean", 
         data = scaled_data, 
         method = "complete",
@@ -204,8 +253,7 @@ NbClust(distance = "euclidean",
 ```
 
 ```{r}
-# before I had run this with scaled data and it gave an error of Inf/nan foreign object
-kmeans(bacteria[,-1], centers = 100) -> km100
+
 ```
 
 ```{r}
@@ -213,21 +261,7 @@ kmeans(bacteria[,-1], centers = 100) -> km100
 ```
 
 
-- The below is too much
-- It ran for a very long time and errored out 
-```{r}
 
-# k <- seq(2:700)
-# r2 <- vector("double", length = length(k))
-# 
-# for (i in seq_along(k)){
-#   set.seed(123)
-#   tempk <- kmeans(bacteria[,-1], k[i])
-#   r2[i] <- tempk$betweenss/tempk$totss
-# }
-# plot(k, r2)
-
-```
 
 
 ```{r}
