@@ -1,0 +1,90 @@
+---
+title: "PCA_Revised_Bacteria_27K"
+author: "Cassandra Sperow"
+date: "2023-10-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stats)
+setwd("/Users/kasan/AU My Drive/001__DATA_793/R_dir_Corals_")
+suppressMessages(library(tidyverse))
+```
+
+# Principal Components Analysis for Revised 27K Bacteria
+
+- Goal: Find groups of bacteria that tend to be together
+- Method: Principal Components Analysis (PCA) which is an unsupervised machine learning technique
+
+## Read in Revised Data Frame
+- Revised bacteria data have 5,890 ASV columns vs. the original 33K. 
+- See "Bacteria ASV Table EDA.Rmd" for details
+```{r}
+# read in revised bacteria df with only 5,890 ASV columns (not 33K)
+read_csv("../output/rev_bacteria.csv") -> rev_bacteria
+```
+
+## Test PCA for Scaled Data
+
+```{r}
+stats::prcomp(rev_bacteria[,-1], scale. = T) -> pca_out
+```
+
+```{r}
+pca_out %>% glimpse()
+```
+
+```{r}
+summary(pca_out) -> pca_out_summary
+
+glimpse(pca_out_summary)
+```
+- From the summary of the PCA results, the output is hard to read because there are 659 samples. 
+```{r}
+# glimpsing the nested df of the importances from the summary()
+pca_out_summary$importance %>% glimpse()
+```
+
+- Create a separate df for the 'importance' aspect of the summary of the PCA results to review the standard deviations, proportions of variance explained, and the cumulative proportions because we need to see how many components explain at least 80 % of the variability in the X matrix of bacteria:
+```{r}
+# from above, the importance results have the following names per PC 1-659
+names_pca_out <- c("Standard deviation" ,"Proportion of Variance", "Cumulative Proportion")
+
+# using the names above to make the same 
+bind_cols(
+pca_out_name = names_pca_out, 
+pca_out_summary$importance
+) -> importance_df
+```
+
+- How many PCs explain at least 80 % ?
+```{r}
+importance_df %>% 
+  # pivoting data drame so that cumulatives are in column
+  t() %>%  as.data.frame() %>% 
+  # moving up top row as column header
+  janitor::row_to_names(1) %>% 
+  # filtering cumulative proportion column for greater > = 80 %
+  filter(`Cumulative Proportion` >= 0.8)
+
+```
+- About 239 principal components explain 80 % of cumulative variance in the X matrix of only the 5K bacteria
+
+- Which ASVs are they?
+
+```{r}
+pca_out$x[,1:239]
+```
+
+
+
+```{r}
+screeplot(pca_out)
+```
+
+
+
+
+
+

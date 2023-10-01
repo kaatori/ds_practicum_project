@@ -15,8 +15,8 @@ suppressMessages(library(tidyverse))
 
 # Unsupervised Clustering of Bacteria 
 
-Goal:  Find groups (i.e., essentially networks) of bacteria that tend to be found within each sample. Use these to see if 33K bacteria features can be paired down. 
-- Reduce the dimensionality of the 33K bacteria strains
+Goal:  Find groups (i.e., essentially networks) of bacteria that tend to be found together. Use these to see if bacteria features can be paired down. 
+- Reduce the dimensionality of the bacteria strains
 
 ### Read in bacteria data
 ```{r}

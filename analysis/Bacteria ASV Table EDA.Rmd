@@ -381,37 +381,85 @@ map(bacteria[,-1], ~sum(.==0)) %>% as_tibble() %>%
   pivot_longer(cols = everything(), 
                names_to = "ASV_column", 
                values_to = "sum_col_eq_0") %>% 
+  # if the cut off includes 656 or more
   filter(sum_col_eq_0 >=656) -> ASV_cols_sum_eq_0
 
 ASV_cols_sum_eq_0
+
+###### if the cut of includes 657 or more because Dr. C said at least 3 samples
+map(bacteria[,-1], ~sum(.==0)) %>% as_tibble() %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "ASV_column", 
+               values_to = "sum_col_eq_0") %>% 
+  filter(sum_col_eq_0 >= 657) -> ASV_cols_sum_eq_0_657# because we want 656 to say: 656 zeros means that ASV was found in 3 samples. 
+
+ASV_cols_sum_eq_0_657 # ASVs found in at least 3 samples
 ```
 - There are 28,733 ASVs with at least 656 zero values for their columns. 
+- There are 27,283 ASVs with at least 657 zero values for their columns. 
 
 - Check the above counts of 0 values with a few ASV columns:
 
 ```{r}
-sum(bacteria$ASV0212==0) # yes, 656 
+sum(bacteria$ASV0212==0) # yes, 656  and only in 3 samples
+# what samples are ASV0212 found in? 
+bacteria %>% 
+  select(sample_id, ASV0212) %>% 
+  filter(ASV0212 !=0)
 
-sum(bacteria$ASV0864==0) # yes 657
+sum(bacteria$ASV0864==0) # yes 657 and only in two samples
+# what samples are this one found in? 
+bacteria %>% 
+  select(sample_id, ASV0864) %>% 
+  filter(ASV0864 !=0)
 
-sum(bacteria$ASV11284==0) # yes, 658
+sum(bacteria$ASV11284==0) # yes, 658 and only for 1 sample
+# what samples are this one found in? 
+bacteria %>% 
+  select(sample_id, ASV11284) %>% 
+  filter(ASV11284 !=0)
+
 
 ```
 
-- The above list of 28,733 ASVs will be presented to Dr. Cárdenas for filtering out. 
+- The above list of 27,283 ASVs will be presented to Dr. Cárdenas for filtering out. 
 - Save list of the ASV column names for later: 
 ```{r}
-ASV_cols_sum_eq_0$ASV_column -> list_ASV_656
+ASV_cols_sum_eq_0_657$ASV_column -> list_ASV_657
 
-length(list_ASV_656) # 28,733 
+length(list_ASV_657) # 27,283 
 ```
 
 - Use the above list to select only the ASVs needed (ie, not the ones in the above list): 
 ```{r}
 bacteria %>% 
   # using the simple vector with (-) sign was deprecated
-  # recommended method is to use all_of() but put (-) sign before it to NOT select those 28k ASVs
-  select(-all_of(list_ASV_656))
+  # recommended method is to use all_of() but put (-) sign before it to NOT select those 27k ASVs
+  select(-all_of(list_ASV_657)) -> rev_bacteria
+
+dim(rev_bacteria) # 659 × 5,890
+
+rev_bacteria
+```
+- The new data frame has the complete set of original samples (659) with a paired down set of bacteria columns (5,890). 
+- Write to csv for reading in later for modeling:
+```{r}
+write_csv(rev_bacteria, "../output/rev_bacteria.csv")
+```
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
 ```
 
 
