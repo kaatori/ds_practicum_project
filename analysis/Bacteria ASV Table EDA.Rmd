@@ -455,6 +455,7 @@ write_csv(rev_bacteria, "../output/rev_bacteria.csv")
 - The new data frame's columns should have no more than 656 zero values
 
 ```{r}
+read_csv("../output/rev_bacteria.csv") -> rev_bactera
 rev_bacteria[,-1] %>% 
   # use map() again to count the number of times the column has 0
   map(., ~sum(.==0)) %>% 
