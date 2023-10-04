@@ -15,46 +15,64 @@ suppressMessages(library(tidyverse))
 
 # Unsupervised Clustering of Bacteria 
 
-Goal:  Find groups (i.e., essentially networks) of bacteria that tend to be found together. Use these to see if bacteria features can be paired down. 
-- Reduce the dimensionality of the bacteria strains
+Goal:  Find groups (i.e., essentially networks) of bacteria that tend to be found together. Use these to see if bacteria features can be paired down from the already reduced 5,890 ASV ```rev_bacteria``` . 
 
-### Read in bacteria data
+- Use the results from the PCA that about 239 principal components explain at least 80 % of the bacteria data.
+
+
+### Read in ```rev_bacteria``` data
 ```{r}
 
-read_delim("../data/Files/ASV_table") %>% 
-  rename(sample_id = `...1`) -> bacteria
+read_csv("../output/rev_bacteria.csv") -> rev_bacteria
 
-head(bacteria)
-```
-
-## Method 1: PCA
-
-Documentation: https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/prcomp
-
-```{r}
-# Using the scaled data gave the following error
-# Error in svd(x, nu = 0, nv = k) : infinite or missing values in 'x'
-#stats::prcomp(bac_sc) -> prcomp_results
-
-# Using the regular df unscaled
-stats::prcomp(bacteria[,-1]) -> prcomp_results
-```
-
-```{r}
-summary(prcomp_results)
-
-typeof(prcomp_results) # list object therefore I can use map
-
-map(prcomp_results, ~as.data.frame(.))
-```
-
-```{r}
-plot(prcomp_results)
+head(rev_bacteria)
 ```
 
 
-## Method 2: K-Means
+## Clustering Method 1: K-Means
+- Question for Dr. Barouti:  If K-means is giving random results every time I run it, is it a good method to use since this seems unstable? (The sizes of the 239 clusters change each time.)
+```{r}
+stats::kmeans(scale(rev_bacteria[,-1]), 
+              centers = 239, 
+              #nstart = 10 # takes long time to run
+              ) -> kmeans_out
+```
 
+
+```{r}
+summary(kmeans_out)
+```
+
+
+```{r}
+kmeans_out$size
+```
+
+- Can I find a better k?
+
+https://rpkgs.datanovia.com/factoextra/
+
+https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/
+
+- Trying ```factoextra``` package to find best ```k```:
+- This took too long (over 20 mins) to run
+```{r}
+library("factoextra")
+# fviz_nbclust(scale(rev_bacteria[,-1]), 
+#              kmeans, 
+#              method = "gap_stat")
+```
+
+
+```{r}
+```
+
+
+
+
+
+
+#----------------------old----------------------------------
 Documentation for ```stats::kmeans()```
 https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/kmeans
 
@@ -89,6 +107,10 @@ head(scaled_data)
 - The below test runs with selecting top 10 ASVs because they have the highest abundance counts and probably least amount of zeros. 
 - Using scaled data
 ```{r}
+
+read_delim("../data/Files/ASV_table") %>% 
+  rename(sample_id = `...1`) -> bacteria
+
 # guessing 5 clusters because there are 10 ASVs
 kmeans(scaled_data, centers = 5) -> km10_cen5
 
@@ -122,22 +144,22 @@ km10_cen5$size
 
 
 ```{r}
-start_time <- Sys.time()
-# this should also work to find optimal k in reduced dataset:
-k <- seq(2:50)
-r2 <- vector("double", length = length(k))
-
-for (i in seq_along(k)){
-  set.seed(123)
-  tempk <- kmeans(scaled_data, k[i])
-  r2[i] <- tempk$betweenss/tempk$totss
-}
-
-
-
-end_time <- Sys.time()
-
-end_time - start_time
+# start_time <- Sys.time()
+# # this should also work to find optimal k in reduced dataset:
+# k <- seq(2:50)
+# r2 <- vector("double", length = length(k))
+# 
+# for (i in seq_along(k)){
+#   set.seed(123)
+#   tempk <- kmeans(scaled_data, k[i])
+#   r2[i] <- tempk$betweenss/tempk$totss
+# }
+# 
+# 
+# 
+# end_time <- Sys.time()
+# 
+# end_time - start_time
 
 
 ```

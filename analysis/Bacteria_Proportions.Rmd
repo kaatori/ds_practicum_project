@@ -1,0 +1,87 @@
+---
+title: "Bacteria_Proportions"
+author: "Cassandra Sperow"
+date: "2023-10-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
+setwd("/Users/kasan/AU My Drive/001__DATA_793/R_dir_Corals_")
+```
+
+# Calculate Proportions of Each ASV per Sample
+
+- Read in revised bacteria data frame 
+```{r}
+read_csv("../output/rev_bacteria.csv") -> rev_bacteria
+```
+
+
+```{r}
+rev_bacteria %>% 
+  rowwise() %>% 
+  mutate(sum_ct_sample = sum(across(2:5890), na.rm = T), .after = sample_id) -> sum_ct_sample
+  
+```
+
+
+```{r}
+# check the sums by row with 1-3 samples
+rev_bacteria[1:3,] %>% 
+  pivot_longer(cols = all_of(starts_with("ASV"))) %>% 
+  group_by(sample_id) %>% 
+  summarise(sum = sum(value)) # yes the sum rowwise across worked
+```
+
+- Subset df to test calculating proportion
+```{r}
+sum_ct_sample[1:3,1:5] -> test_df
+
+write_csv(test_df, "../output/test.df.csv")
+
+# proportion function 
+map(rowwise(sum_ct_sample[1:3,3:5]), ~expss::prop(.)) %>% as.data.frame()
+```
+
+- Check calculation of proportion() with subset
+```{r}
+bind_cols(
+sum_ct_sample[1:3,3:5],  
+prop_test
+)
+
+```
+- Tried map(), rowwise(), prop.table() in various combinations which continued to calculated by column and not row, even with ```rowwise()```. 
+- Solution found here: 
+https://stackoverflow.com/questions/16032826/calculate-row-wise-proportions
+- This is same as in Excel when selecting only across to do proportions based on only the sum across per row
+```{r}
+# test
+sum_ct_sample[1:3,3:5] %>% 
+  sweep(., 1, rowSums(.), FUN = "/")
+
+
+rev_bacteria[,-1] %>% 
+  sweep(., 1, rowSums(.), FUN = "/") %>% 
+  map(., ~round(., 3)) %>% as.data.frame() -> rev_bacteria_prop
+```
+
+## Data Quality Check
+- Yes, this calculates correctly summing by row and then taking each cell in the row and dividing with denominator as the row sum:
+```{r}
+bind_cols(
+sum_ct_sample[1:3, 1:5], 
+rev_bacteria_prop[1:3,1:3]
+)
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+

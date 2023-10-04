@@ -372,7 +372,7 @@ bacteria %>%
 ```
 - ASV33172 is only found in sample SYAN-R4-9 with an abundance count of 8. Per Dr. Cárdenas, can take out this and similar ASVs. 
 
-- Next, need ot do this for the other columns
+- Next, need to do this for the other columns
 
 ```{r}
 sum(test_df$ASV33172==0) # 658 
@@ -385,8 +385,10 @@ map(bacteria[,-1], ~sum(.==0)) %>% as_tibble() %>%
   filter(sum_col_eq_0 >=656) -> ASV_cols_sum_eq_0
 
 ASV_cols_sum_eq_0
-
-###### if the cut of includes 657 or more because Dr. C said at least 3 samples
+```
+- We want to keep the cases where there are 656 zeros so we need greater than or equal to 657 for 2 samples and fewer. 
+```{r}
+###### if the cut off includes 657 or more because Dr. C said at least 3 samples
 map(bacteria[,-1], ~sum(.==0)) %>% as_tibble() %>% 
   pivot_longer(cols = everything(), 
                names_to = "ASV_column", 
@@ -398,7 +400,7 @@ ASV_cols_sum_eq_0_657 # ASVs found in at least 3 samples
 ```
 - There are 28,733 ASVs with at least 656 zero values for their columns. 
 
-- There are 27,283 ASVs with at least 657 zero values for their columns. 
+- **There are 27,283 ASVs with at least 657 zero values for their columns.** 
 
 - Check the above counts of 0 values with a few ASV columns:
 
@@ -447,15 +449,16 @@ rev_bacteria
 ```
 - The new data frame has the complete set of original samples (659) with a paired down set of bacteria columns (5,890). 
 - Write to csv for reading in later for modeling:
+- We don't need to keep rewriting it so it is commented out. 
 ```{r}
-write_csv(rev_bacteria, "../output/rev_bacteria.csv")
+#write_csv(rev_bacteria, "../output/rev_bacteria.csv")
 ```
 
 - Quality Check:
 - The new data frame's columns should have no more than 656 zero values
 
 ```{r}
-read_csv("../output/rev_bacteria.csv") -> rev_bactera
+read_csv("../output/rev_bacteria.csv") -> rev_bacteria
 rev_bacteria[,-1] %>% 
   # use map() again to count the number of times the column has 0
   map(., ~sum(.==0)) %>% 
