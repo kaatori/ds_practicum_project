@@ -47,10 +47,10 @@ map(rowwise(sum_ct_sample[1:3,3:5]), ~expss::prop(.)) %>% as.data.frame()
 
 - Check calculation of proportion() with subset
 ```{r}
-bind_cols(
-sum_ct_sample[1:3,3:5],  
-prop_test
-)
+# bind_cols(
+# sum_ct_sample[1:3,3:5],  
+# prop_test
+# )
 
 ```
 - Tried map(), rowwise(), prop.table() in various combinations which continued to calculated by column and not row, even with ```rowwise()```. 
@@ -65,7 +65,7 @@ sum_ct_sample[1:3,3:5] %>%
 
 rev_bacteria[,-1] %>% 
   sweep(., 1, rowSums(.), FUN = "/") %>% 
-  map(., ~round(., 3)) %>% as.data.frame() -> rev_bacteria_prop
+  map(., ~round(., 5)) %>% as.data.frame() -> rev_bacteria_prop
 ```
 
 ## Data Quality Check
@@ -77,11 +77,19 @@ rev_bacteria_prop[1:3,1:3]
 )
 ```
 
-
+- Combine the new proportions table with sample id column:
 ```{r}
+bind_cols(
+  rev_bacteria$sample_id,  
+  rev_bacteria_prop
+) %>% 
+  rename(sample_id = `...1`) -> rev_bacteria_prop_df
+
 ```
 
-
+- Before saving the above to a new object, I checked that the rows and columns are consistent with subset above as a second data quality check before writing to csv. 
 ```{r}
+write_csv(rev_bacteria_prop_df, "../output/rev_bacteria_prop_df.csv")
+
 ```
 
