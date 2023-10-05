@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
 ```
 
 ## 
@@ -24,61 +25,14 @@ read_csv("../output/rev_bacteria_prop_df.csv") -> rev_bacteria_prop_df
 stats::prcomp(rev_bacteria_prop_df[,-1], scale. = T) -> pca_out
 ```
 
-- Fixed::::For this error and from this discussion online, there seems to be a column with an Inf when scaling is applied because of the tandard deviation. It would be a column that has all constant values to where the standard deviation would be 0 and the variance would be 0.
-
-```{r}
-map(rev_bacteria_prop_df, ~sd(.)) %>% as.data.frame() %>% 
-  pivot_longer(cols = everything()) %>% 
-  filter(value==0)
-```
-
-- Why are these columns returning 0 standard deviation?
-```{r}
-rev_bacteria_prop_df$ASV10000 %>% sum()
-
-# compare with original column in counts data frame
-read_csv("../output/rev_bacteria.csv") -> rev_bacteria
-
-rev_bacteria$ASV10000 %>% sum() # this proportion must have been calculated as 0
-rev_bacteria$ASV10000 # when we look at the original column, the counts are so low that the proportion would be 0 when the low counts were divided by the row sums
-
-# Example:  Row sum of first sample: 
-rev_bacteria[1,-1] %>% sum()
-# counts for this sample across the row
-rev_bacteria[1,-1] 
-# proportions across this row
-(rev_bacteria[1,-1]  )/(rev_bacteria[1,-1] %>% sum())
-
-
-
-```
-- Comparing the low count of __ for ASV0075 will give a 0.000 proportion when rounding to 3 decimal places. 
-- Even for  ASV0057 and ASV0078 with 25 and 68 in counts, respectively, will give  0.0002488503 and 0.0006768728 in proportions rowwise, respectively. 
-- Since the data frame is full of low counts for several bacteria, we can either increase the number of rounded decimal places when calculating the proportions, or figure out criteria for taking these ASVs out. I do not think it's recommended to do the PCA without scaling. 
-
-```{r}
-```
-
-
-```{r}
-#stats::prcomp(rev_bacteria_prop_df[,-1]) -> pca_out_ns
-```
-
-
-```{r}
-summary(pca_out) -> summary_pca
-
-summary_pca$importance %>% as.data.frame()
-```
-
+- Plot the results
 ```{r}
 plot(pca_out)
 ```
 
-
 ```{r}
-
-factoextra::fviz_pca_var(pca_out, 
+library(factoextra)
+fviz_pca_var(pca_out, 
              #col.var = "steelblue", 
              col.var = "contrib", 
              gradient.cols = c("red", "blue", "green"), 
@@ -87,14 +41,73 @@ factoextra::fviz_pca_var(pca_out,
              title = "All Variables in PCA")
 ```
 
-
+- Create an save summary of PCA results
 ```{r}
+summary(pca_out) -> summary_pca
+
+# subset the results to view the importance df
+summary_pca$importance %>% as_tibble() -> importance_matrix
+```
+
+- Create new df of importance matrix with row names
+```{r}
+bind_cols(
+  name = c("StndDev", "IndivProp", "CumProp"), 
+  importance_matrix
+) -> importance_df
 ```
 
 
+- Plot individual proportion with cumulative
+
 ```{r}
+importance_df %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  janitor::row_to_names(1) %>% 
+  ggplot(aes(x = as.numeric(CumProp) , y =  as.numeric(IndivProp))) +
+  geom_point() +
+  ggtitle("PCA Results: Proportion of Variance", "This is a better screeplot showing all PCs") +
+  xlab("Cumulative Proportion") +
+  ylab("Proportion of Variance per Principal Component") +
+  theme_bw()
 ```
 
 
+
 ```{r}
+fviz_pca_ind(pca_out, 
+             select.ind = list(contrib = 100),
+             col.ind = "#00AFBB",
+             #addEllipses=TRUE, ellipse.level=0.85, 
+             #palette = "Dark2",
+            # palette = c("#999999", "#E69F00", "#56B4E9"),
+             repel = TRUE, 
+           # label = "var",
+            geom = c("arrow", "text"),
+            title = "Top 100 Contributing PCs")
 ```
+
+- How many PCs contribute at least 80 % ?
+```{r}
+importance_df %>% 
+  # pivoting data drame so that cumulatives are in column
+  t() %>%  as.data.frame() %>% 
+  # moving up top row as column header
+  janitor::row_to_names(1) %>% ######## snapshot here for presentation
+  # filtering cumulative proportion column for greater > = 80 %
+  filter(CumProp >= 0.8)
+```
+- Same number of PCs as before when first running PCA. See 'PCA_Revised_Bacteria_27K'. 
+
+
+
+
+
+
+
+
+
+
+
+

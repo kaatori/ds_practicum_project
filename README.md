@@ -1,18 +1,36 @@
 # ds_practicum_project
+
 Data Science Practicum Project for completion of the MS in Data Science, expected December 2023
 
 # R Version
 
-tba
+R version 4.3.1 (2023-06-16) -- "Beagle Scouts"
 
-# R Packages & Versions
+# R Packages & Versions - to be revised
 
-tba
+tidyverse
+
+stats
+
+factoextra
+
+janitor
+
+leaflet
+
+viridis (?)
+
+plotly
+
+ggfortify
+
+# RStudio Version
+
+Version 2023.09.0+463 (2023.09.0+463)
 
 # Operating System
 
-
-tba
+Mac OSX
 
 
 
