@@ -30,7 +30,7 @@ Version 2023.09.0+463 (2023.09.0+463)
 
 # Operating System
 
-Mac OSX
+Mac OSX Ventura 13.5.2 (22G91)
 
 
 

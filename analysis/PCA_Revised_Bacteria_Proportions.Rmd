@@ -14,6 +14,11 @@ suppressMessages(library(tidyverse))
 
 # Principal Components Analysis for Revised Bacteria Proportions 
 
+- *Goal*: Find the principal components of the ASV matrix of counts. The number of principal components that explains most of the underlying data may be used as a number "k" clusters for K-Means later. 
+
+- *Method*: Principal Components Analysis (PCA) which is an unsupervised machine learning technique to reduce the dimensionality of the data set. At the present moment, the ASVs are considered to be in p=5,890-dimensional space. PCA seeks to reduce this number of dimensions while still retaining the maximum amount of information in the ASVs.
+
+
 - Read in revised data of proportions per bacteria per sample: 
 ```{r}
 read_csv("../output/rev_bacteria_prop_df.csv") -> rev_bacteria_prop_df
@@ -22,31 +27,31 @@ read_csv("../output/rev_bacteria_prop_df.csv") -> rev_bacteria_prop_df
 
 ```{r}
 # take out sample_id column and scale proportions data
-stats::prcomp(rev_bacteria_prop_df[,-1], scale. = T) -> pca_out
+stats::prcomp(rev_bacteria_prop_df[,-1], scale. = T) -> pca_out_prop
 ```
 
 - Plot the results
 ```{r}
-plot(pca_out)
+plot(pca_out_prop)
 ```
 
 ```{r}
 library(factoextra)
-fviz_pca_var(pca_out, 
+fviz_pca_var(pca_out_prop, 
              #col.var = "steelblue", 
              col.var = "contrib", 
              gradient.cols = c("red", "blue", "green"), 
             # repel = T, 
             label = "none",
-             title = "All Variables in PCA")
+             title = "All Variables in PCA using Bacterial Proprtions")
 ```
 
 - Create an save summary of PCA results
 ```{r}
-summary(pca_out) -> summary_pca
+summary(pca_out_prop) -> summary_pca_prop
 
 # subset the results to view the importance df
-summary_pca$importance %>% as_tibble() -> importance_matrix
+summary_pca_prop$importance %>% as_tibble() -> importance_matrix
 ```
 
 - Create new df of importance matrix with row names
@@ -67,7 +72,7 @@ importance_df %>%
   janitor::row_to_names(1) %>% 
   ggplot(aes(x = as.numeric(CumProp) , y =  as.numeric(IndivProp))) +
   geom_point() +
-  ggtitle("PCA Results: Proportion of Variance", "This is a better screeplot showing all PCs") +
+  ggtitle("PCA Results: Proportion of Variance", "This is a better screeplot showing all PCs on Proprtions-based `rev_bacteria_prop` scaled") +
   xlab("Cumulative Proportion") +
   ylab("Proportion of Variance per Principal Component") +
   theme_bw()
@@ -76,7 +81,7 @@ importance_df %>%
 
 
 ```{r}
-fviz_pca_ind(pca_out, 
+fviz_pca_ind(pca_out_prop, 
              select.ind = list(contrib = 100),
              col.ind = "#00AFBB",
              #addEllipses=TRUE, ellipse.level=0.85, 
@@ -98,15 +103,50 @@ importance_df %>%
   # filtering cumulative proportion column for greater > = 80 %
   filter(CumProp >= 0.8)
 ```
-- Same number of PCs as before when first running PCA. See 'PCA_Revised_Bacteria_27K'. 
+- Same number of PCs as before when first running PCA on counts-based data. See 'PCA_Revised_Bacteria.Rmd'. 
+
+- What happens if I don't scale the proportions? 
+```{r}
+stats::prcomp(rev_bacteria_prop_df[,-1]) -> pca_out_prop_NS
+```
+
+- Subset importance part of summary output and create separate df for graphing. 
+```{r}
+summary(pca_out_prop_NS)$importance %>% as_tibble() -> imp2
+
+bind_cols(
+  name = c("StndDev", "IndivProp", "CumProp"), 
+  imp2
+) -> imp2_matrix
+```
 
 
+- When the proportions data are not scaled, the PCA results are very different
+```{r}
+imp2_matrix %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  janitor::row_to_names(1) %>% 
+  ggplot(aes(x = as.numeric(CumProp) , y =  as.numeric(IndivProp))) +
+  geom_point() +
+  ggtitle("PCA Results: Non-Scaled Proportion of Variance", "This is a better screeplot showing all PCs on Proprtions-based `rev_bacteria_prop` NON-Scaled") +
+  xlab("Cumulative Proportion") +
+  ylab("Proportion of Variance per Principal Component") +
+  theme_bw()
 
+```
 
-
-
-
-
+- When the proportions data are not scaled, the number of principal components that seem to explain 80 or more % of the X matrix of bacteria goes way down to 7 vs. 239. 
+```{r}
+imp2_matrix %>% 
+  t() %>% 
+  as.data.frame() %>% 
+    # moving up top row as column header
+  janitor::row_to_names(1) %>% ######## snapshot here for presentation
+  # filtering cumulative proportion column for greater > = 80 %
+  filter(CumProp >= 0.8)
+  
+```
 
 
 
