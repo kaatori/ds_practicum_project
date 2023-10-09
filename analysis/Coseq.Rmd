@@ -1,0 +1,117 @@
+---
+title: "Coseq"
+author: "Cassandra Sperow"
+date: "2023-10-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+### Coseq is an R library that works with count-based data to implement clustering with better perofrmance on compositional data
+- Coseq transforms the data for better clustering analysis
+- The ASV counts are by nature compositional data
+- Compositional data are dependent upon the samples taken
+- See publication: https://arxiv.org/pdf/1704.06150.pdf
+
+#### Read in count-based data and transpose according to what the package documentation states: 
+- Takes a matrix of data.frame of gene-level or ASV-level counts of dimension n x d where n= genes or ASVs and d=samples: 
+```{r}
+read_csv("../output/rev_bacteria.csv") -> rev_bacteria
+
+rev_bacteria %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  janitor::row_to_names(1) %>% 
+  map(., ~as.numeric(.)) %>% 
+  as.data.frame() -> t_rev_bacteria_counts
+```
+
+- Inspect transposed data frame
+- all numeric
+- raw counts
+- n = ASVs in rows
+- d = samples in columns
+- See documentation for why it needs to be in this format: 
+https://www.bioconductor.org/packages/devel/bioc/vignettes/coseq/inst/doc/coseq.html
+```{r}
+head(t_rev_bacteria_counts)
+```
+
+#### Quick Start Guide for ```coseq``` package
+- It may necessary for new users to go through the commands on this page to set up Bioconductor and coseq:
+https://www.bioconductor.org/install/
+- Number of K and max iterations are low to try out method first
+```{r}
+library(coseq)
+# try the default method suggested by documentation
+# number of iter and number of lcusters is low to try out method
+coseq(t_rev_bacteria_counts,
+      K=2:25, 
+      transformation="logclr",
+      norm="TMM", 
+      meanFilterCutoff=50, 
+      model="kmeans",
+      nstart=1, 
+      iter.max=10) -> coseq_out
+```
+
+
+```{r}
+# summary
+summary(coseq_out)
+
+# cluster results
+clusters(coseq_out) 
+
+# conditional probabilities of cluster membership
+assay(coseq_out) %>% as.data.frame()
+```
+
+```{r}
+class(coseq_out)
+
+plot(coseq_out)
+```
+
+- Per article below, for K-Means, "...the use of untransformed or logCLR-transformed data with K-means thus appears to be a more coherent choice." pg. 12
+link: https://arxiv.org/pdf/1704.06150.pdf
+#### CLR Transformation
+- Dr. C advised to use this transformation from the raw counts to the centered log ratio (CLR)
+- increasing the max iter
+```{r}
+# changed max iter
+# canged transformation type
+coseq(t_rev_bacteria_counts,
+      K=2:25, 
+      transformation="clr", # centered log ratio
+      norm="TMM", # bio-specific setting for these data
+      meanFilterCutoff=50, 
+      model="kmeans",
+      nstart=1, 
+      iter.max=50) -> coseq_out_2
+```
+
+
+```{r}
+# cluster results
+clusters(coseq_out_2) 
+
+# conditional probabilities of cluster membership
+assay(coseq_out_2) %>% as.data.frame()
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+

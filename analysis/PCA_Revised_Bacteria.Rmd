@@ -189,25 +189,39 @@ importance_df %>%
   janitor::row_to_names(1) %>% 
   ggplot(aes(x = as.numeric(`Cumulative Proportion`) , y =  as.numeric(`Proportion of Variance`))) +
   geom_point() +
-  ggtitle("PCA Results: Proportion of Variance", "This is a better screeplot showing all PCs on counts-based `rev_bacteria` scaled") +
+  ggtitle("PCA Results: Proportion of Variance", "This is a better screeplot showing all PCs on counts-based `rev_bacteria` Scaled") +
   xlab("Cumulative Proportion") +
   ylab("Proportion of Variance per Principal Component") +
   theme_bw()
 ```
 Interpretation: This acts as a more informative screeplot that shows how the proportion of variance exponentially decreases. 
 
-
-
-
+- Compare same plot 
 ```{r}
+fviz_pca_var(pca_out, 
+             col.var = "contrib", 
+             alpha.var = .5,
+             #repel = TRUE,
+             title = "Count-based, Scaled Bacteria PCA Results \nTop 100 Contributors",
+             select.var = list(contrib = 100))
 ```
 
-
+- Dim 1
 ```{r}
+fviz_contrib(pca_out, 
+             choice = "var", 
+             axes = 1,
+             
+             top = 20) %>% 
+  ggpubr::ggpar(., ylim = c(0, 0.6))
 ```
 
-
+- Dim 2
 ```{r}
+fviz_contrib(pca_out, 
+             choice = "var", 
+             axes = 2,
+             top = 20)
 ```
 
 

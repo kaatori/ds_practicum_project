@@ -15,29 +15,74 @@ suppressMessages(library(tidyverse))
 
 # Unsupervised Clustering of Bacteria 
 
-Goal:  Find groups (i.e., essentially networks) of bacteria that tend to be found together. Use these to see if bacteria features can be paired down from the already reduced 5,890 ASV ```rev_bacteria``` . 
+Goal:  Find groups (i.e., essentially networks) of bacteria that tend to be found together. Use these to see if bacteria features can be paired down from the already reduced 5,890 ASV ```rev_bacteria_prop_df``` . 
 
 - Use the results from the PCA that about 239 principal components explain at least 80 % of the bacteria data.
 
 
-### Read in ```rev_bacteria``` data
+### Read in ```rev_bacteria_prop_df``` data
+- This is the revised bacteria data that is proportion-based by row sums. See `Bacteria_Proportions.Rmd` for details. 
 ```{r}
+# read in the new proportion-based bacteria data
+read_csv("../output/rev_bacteria_prop_df.csv") -> rev_bacteria_prop_df
 
-read_csv("../output/rev_bacteria.csv") -> rev_bacteria
+head(rev_bacteria_prop_df)
+```
 
-head(rev_bacteria)
+## Test stability of K-means on subset of data, default K-means algorithm
+```{r}
+set.seed(92)
+random_columns = sample(1:5890, size=2000)
+
+rev_bacteria_prop_df %>% 
+  # random sample of rows
+  slice_sample(n=400) %>% 
+  # random sample of columns indexed with random generator above
+  select(all_of(random_columns)) -> random_subset
+
+random_subset %>% head()
+
+dim(random_subset) # 400 by 2000
+
+```
+
+- Random subset keeps giving me columns that have NaN values when scaled in K-means, so need to take out those columns for a good subset while still having a lot more columns than observations like original.
+```{r}
+random_subset %>% 
+  scale() %>% as.data.frame() %>% 
+  map(., ~sum(is.nan(.))) %>% as.data.frame() %>% 
+  t() %>%  as.data.frame() %>% 
+  filter(V1 == 0) 
+
+scale(random_subset) %>% as.data.frame()
 ```
 
 
-## Clustering Method 1: K-Means
 - Question for Dr. Barouti:  If K-means is giving random results every time I run it, is it a good method to use since this seems unstable? (The sizes of the 239 clusters change each time.)
 ```{r}
-stats::kmeans(scale(rev_bacteria[,-1]), 
+# stats::kmeans(scale(random_subset), 
+#               centers = 239, 
+#               #nstart = 10 # takes long time to run
+#               ) -> kmeans_out
+```
+
+```{r}
+# create object to pass into solution for removing columns that have any sort of NaN value
+scale(random_subset) -> sc_random
+
+# solution used via this link
+# https://stackoverflow.com/questions/12454487/remove-columns-from-dataframe-where-some-of-values-are-na
+sc_random[, colSums(is.nan(sc_random)) == 0] %>% 
+  as.data.frame() -> sc_random_df
+```
+
+
+```{r}
+stats::kmeans(sc_random_df, 
               centers = 239, 
               #nstart = 10 # takes long time to run
               ) -> kmeans_out
 ```
-
 
 ```{r}
 summary(kmeans_out)
@@ -48,6 +93,8 @@ summary(kmeans_out)
 kmeans_out$size
 ```
 
+- Re-running K-means on the subset of random rows and columns returns consistently unstable sizes of clusters. Setting the seed would be an artificial fix and wouldn't be a true representation of the bacterial groups. 
+
 - Can I find a better k?
 
 https://rpkgs.datanovia.com/factoextra/
@@ -55,223 +102,104 @@ https://rpkgs.datanovia.com/factoextra/
 https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/
 
 - Trying ```factoextra``` package to find best ```k```:
-- This took too long (over 20 mins) to run
+- **This took too long (over 20 mins) to run**
+- Did not converge
 ```{r}
-library("factoextra")
-# fviz_nbclust(scale(rev_bacteria[,-1]), 
-#              kmeans, 
+# library("factoextra")
+# fviz_nbclust(sc_random_df,
+#              kmeans,
+#              k.max = 250,
 #              method = "gap_stat")
 ```
 
-
+# K-Means with Transposed Rows and Columns: Default K-means Algorithm
+- Because K-Means clusters by row, so put the rows as the bacteria. 
+- If K-Means works by row, and if the point is to cluster the bacteria, then why don't I try to transpose to where the bacteria are rows?
 ```{r}
+rev_bacteria_prop_df %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  janitor::row_to_names(1) %>% 
+  map(., ~as.numeric(.)) %>% 
+  as.data.frame() -> rev_bacteria_prop_t
 ```
 
 
 
-
-
-
-#----------------------old----------------------------------
-Documentation for ```stats::kmeans()```
-https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/kmeans
-
 ```{r}
-# experiment with partial dataset because of how long it's taking and the errors of NA/NaN/Inf
-
-set.seed(123)
-bacteria %>% 
-  slice_sample(n=300) %>% 
-  select(1:11) -> top_10_df
-
-top_10_df
-```
-- kmeans cannot take NA or Inf values
-- there are no NA or Inf values at this time in data frame
-```{r}
-sum(is.na(top_10_df))
+stats::kmeans(scale(rev_bacteria_prop_t), 
+              centers = 239, 
+              iter.max = 50 # twice it has not converged in default 10 iter
+              ) -> t_kmeans_out
 ```
 
-### Scale the top 10 subset of data
-```{r}
-top_10_df[,-1] %>% scale() -> scaled_data
-
-head(scaled_data)
-```
-
-
-# Test K-means
-
-- Documentation: https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/kmeans
-
-- The below test runs with selecting top 10 ASVs because they have the highest abundance counts and probably least amount of zeros. 
-- Using scaled data
-```{r}
-
-read_delim("../data/Files/ASV_table") %>% 
-  rename(sample_id = `...1`) -> bacteria
-
-# guessing 5 clusters because there are 10 ASVs
-kmeans(scaled_data, centers = 5) -> km10_cen5
-
-km10_cen5
-summary(km10_cen5)
-#km10_cen5 %>% broom::tidy()
-
-km10_cen5$cluster # this is results of cluster assignment 
-
-# use the cluster vector and append to test subset
-# also need to put back the sample id column that was not needed for K-means
-bind_cols(
-scaled_data, # original used to run kmeans
-cluster = km10_cen5$cluster, # kmeans cluster assignment
-sample_id = top_10_df$sample_id # orignal sample id column
-) -> results
-
-
-# examine cluster assignment groups 
-results %>% 
-  group_by(cluster) %>% 
-  summarise(n = n())
-
-
-# verify cluster assignment groups with kmeans results of size
-km10_cen5$size
-```
-
-
-
-
-
-```{r}
-# start_time <- Sys.time()
-# # this should also work to find optimal k in reduced dataset:
-# k <- seq(2:50)
-# r2 <- vector("double", length = length(k))
-# 
-# for (i in seq_along(k)){
-#   set.seed(123)
-#   tempk <- kmeans(scaled_data, k[i])
-#   r2[i] <- tempk$betweenss/tempk$totss
-# }
-# 
-# 
-# 
-# end_time <- Sys.time()
-# 
-# end_time - start_time
-
-
-```
-
-```{r}
-plot(k, r2, main = "Finding Optimal K clusters in Scaled Test 300 x 10")
-
-plot(k[1:10], r2[1:10], main = "Close-up of 1-10 K vs. R2")
-```
-
-#### Interpretation: The optimal k for the test set of first 10 ASVs seems to be at around k = 4 or k = 5 on x-axis. 
-
-- This R2 is un-adjusted per Ressler STAT 627 notes on this method. 
+Notes from Ressler: 
 
 - Increasing k will always increase R2, but do not want to introduce bias just for only a little gain. This is where the plot begins to plateau such that there is little gain in R2 as k increases. This means there is potential bias and we would like a k value at the 'knee' in the plot which is around k=4. 
 
 - The 'knee' point means that k=4 is a possible optimized number of clusters according to the R2, but the leveling off as k reaches 7-10 indicates that the gains with one more cluster are possibly not worth it, but we can also estimate k other ways.
 
-- For now, experiment with 4.
-
+### Does Using Transposed Data Create More Stable Output?
+- No, the sizes and clusters are still different every time. 
 ```{r}
-# use scaled data test df of 300 x 10
-# default is algorithm of Hartigan and Wong (1979)
-#set.seed(123) # this is because of nstart
-kmeans(scaled_data, 4) -> km10_cen4
 
-km10_cen4$size
+t_kmeans_out$size
 ```
-- Re-running it is giving different sizes per cluster
-- It fluctuates a lot and it needs to be more stable without setting the seed. Right???
-- Re-running above and the re-plotting is giving different cluster assignments - seems unstable. 
-- If I set the seed at 123, it will give same results but since they're randomly variable, would the results I get be dependable?
-- The basic shapes in the plot are consistent, but it's just the size of each cluster
-- maybe k is not optimized at 4. 
-
+### Try different K-means Algorithm of MacQueen
 ```{r}
-library("factoextra")
-fviz_cluster(km10_cen4, data = scaled_data, 
-             ggtheme = theme_bw(), 
-             main = "Cluster Plot of km10_cen4 \nTest DF 300 samples x Top 10 ASVs")
+# algorithm of Hartigan and Wong (1979) used by default
+# change to experiment with MacQueen 
+stats::kmeans(scale(rev_bacteria_prop_t), 
+              centers = 239, 
+              algorithm = "MacQueen",
+              iter.max = 50 # twice it has not converged in default 10 iter
+              ) -> t_kmeans_out_Q
 ```
 
-
-
+- One thing that's stable is that it's always giving a cluster with at least 4,000 in one of the sizes each time I re-rum (re-ran randomly 5x): 
 ```{r}
-# trying with 8 to see if the re-running of the algorithm gives highly variable results or seems more stable
-kmeans(scaled_data, centers = 8) -> km_scaled_8
-
-km10_cen4$size
-km_scaled_8$size
-```
-- Yes, after re-running with 8 clusters, seems to produce a lot of variable results with some group sizes fluctuating between 100 and 30s. 
-
-- It may also mean that K-Means is not a good method, although I haven't tried to change the centroid to average or use other paramters as much. 
-
-```{r}
-fviz_cluster(km_scaled_4, data = scaled_data, 
-             ggtheme = theme_bw(), 
-             main = "Cluster Plot of km_scaled_4")
-
-
-fviz_cluster(km_scaled_8, data = scaled_data, 
-             ggtheme = theme_bw(), 
-             main = "Cluster Plot of km_scaled_8")
-```
-
-
-
-### Not sure if I should try and run it on whole dataset and see if it also re-generates drastically different sizes each time. 
-
-```{r}
-scale(bacteria[,-1]) %>% 
-  as.data.frame() -> bac_sc
+t_kmeans_out_Q$size
 ```
 
 ```{r}
-# try 20 centers bc there are top 20 ASVs on March 2023 publication
-# kmeans(bac_sc, centers = 20)
+
+which.max(t_kmeans_out_Q$size)
+```
+
+```{r}
+plot(t_kmeans_out_Q$cluster)
+plot(t_kmeans_out_Q$size) # one group of over 4K
+```
+
+```{r}
+plot(1:length(t_kmeans_out_Q$size), t_kmeans_out_Q$withinss)
+```
+
+- X-axis as the number of clusters of 239 based on PCA
+- Y-axis as the within cluster sums of squares for each cluster
+- Goal is to minimize the within cluster sum of squares but some are very high
+
+```{r}
+library(factoextra)
+fviz_cluster(t_kmeans_out_Q, 
+             data = rev_bacteria_prop_t, 
+             legend = "none"
+             )
 ```
 
 
-
-
-
-
-
-
-
-
-### NbClust
+### NbClust Library with Factoextra Viz
 ```{r}
 library(NbClust)
-NbClust(distance = "euclidean", 
-        data = top_10_df[,-1], 
+NbClust(distance = "euclidean",
+        data = scale(rev_bacteria_prop_t),
         method = "complete",
-        min.nc = 4, 
-        max.nc = 8,
-        index = "all") -> nb_4_8
+        min.nc = 20,
+        max.nc = 250,
+        index = "all") -> nb1
 
-#library(factoextra)
-#fviz_nbclust(nb_4_8)
 
-### run again with scaled data
-NbClust(distance = "euclidean", 
-        data = scaled_data, 
-        method = "complete",
-        min.nc = 4, 
-        max.nc = 8,
-        index = "all") -> scaled_nbc
 
-#library(factoextra)
-#fviz_nbclust(scaled_nbc)
 ```
 
 ```{r}
@@ -309,105 +237,6 @@ NbClust(distance = "euclidean",
 ```{r}
 ```
 
-## Hierarchical
-
-- From Ressler Notes: 
-
-"Build an upside-down tree starting with 
- leaves and work our way up to build a hierarchy of similar observations within clusters.
-
-We have to make two choices
-
-A measure for distance, here we are using the L2
- Norm but others are possible
-A method for determining the “linkage” between the clusters so we can calculate their “dissimilarity”.
-Four common linkages: Complete, Single, Average, and Centroid of which Average and Complete are generally preferred.
-There are many others.
-The linkage can affect the shape of the clusters in p-dimensional 
- space."
-
-```{r}
-hclust(dist(scaled_data), method = "complete") -> hc1
-```
 
 
-```{r}
-plot(hc1)
-```
-
-
-```{r}
-hc2 <-cutree(hc1, k=5)
-hc2
-table(hc2)
-```
-
-```{r}
-
-scaled_data[hc2 == 2,] %>% length()
-
-scaled_data[hc2 == 5,] %>% length()
-
-```
-
-
-
-```{r}
-
-plot(hc2)
-
-hc2 %>% typeof
-```
-
-### Centroid
-```{r}
-HCC <- hclust(dist(scaled_data), method = "centroid")
-plot(HCC)
-class(HCC)
-
-fviz_dend(HCC, rect = TRUE, cex = 0.5,
-          k_colors = c("#00AFBB","#2E9FDF", "#E7B800", "#FC4E07"))
-
-summary(HCC)
-
-HCC$order
-```
-
-```{r}
-plot(HCC)
-library(dendextend)
-png("../plots/den.png")
-plot(HCC)
-dev.off()
-```
-
-```{r}
-HCC5 <- cutree(HCC, 5)
-table(HCC5)
-```
-
-
-```{r}
-HCC5[HCC5 >= 4]
-```
-
-```{r}
-data.frame(hc2, HCC5)
-```
-```{r}
-library(dendextend)
-avg_dend_obj <- as.dendrogram(HCC)
-avg_col_dend <- color_branches(avg_dend_obj, h = 3)
-plot(avg_col_dend)
-```
-```{r}
-
-scaled_data %>% 
-  as_tibble() %>% 
-  mutate(cluster = HCC) %>% 
-  group_by(cluster)
-```
-
-
-https://rpkgs.datanovia.com/factoextra/
 

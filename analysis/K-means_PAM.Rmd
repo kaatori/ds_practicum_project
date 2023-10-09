@@ -1,0 +1,255 @@
+---
+title: "K-Means Clustering of Bacteria"
+author: "Cassandra Sperow"
+date: "2023-10-9"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stats)
+setwd("/Users/kasan/AU My Drive/001__DATA_793/R_dir_Corals_")
+suppressMessages(library(tidyverse))
+
+```
+
+# K-means
+
+
+- Question for Dr. Barouti:  If K-means is giving random results every time I run it, is it a good method to use since this seems unstable? (The sizes of the 239 clusters change each time.)
+
+Goal:  Find groups (i.e., essentially networks) of bacteria that tend to be found together. Use these to see if bacteria features can be paired down from the already reduced 5,890 ASV ```rev_bacteria_prop_df``` . 
+
+- Use the results from the PCA that about 239 principal components explain at least 80 % of the bacteria data.
+
+
+### Read in ```rev_bacteria_prop_df``` data
+- This is the revised bacteria data that is proportion-based by row sums. See `Bacteria_Proportions.Rmd` for details. 
+```{r}
+# read in the new proportion-based bacteria data
+read_csv("../output/rev_bacteria_prop_df.csv") -> rev_bacteria_prop_df
+
+head(rev_bacteria_prop_df)
+```
+
+## Test stability of K-means on subset of data, default K-means algorithm
+```{r}
+set.seed(92)
+random_columns = sample(1:5890, size=2000)
+
+rev_bacteria_prop_df %>% 
+  # random sample of rows
+  slice_sample(n=400) %>% 
+  # random sample of columns indexed with random generator above
+  select(all_of(random_columns)) -> random_subset
+
+random_subset %>% head()
+
+dim(random_subset) # 400 by 2000
+
+```
+
+- Random subset keeps giving me columns that have NaN values when scaled in K-means, so need to take out those columns for a good subset while still having a lot more columns than observations like original.
+```{r}
+# exploring which columns are creating NaN values
+random_subset %>% 
+  scale() %>% as.data.frame() %>% 
+  # map over all columns to see which ones have NaN values
+  map(., ~sum(is.nan(.))) %>% as.data.frame() %>% 
+  # transpose the list of values from map into vertical df
+  t() %>%  as.data.frame() %>% 
+  # view which ones and how many have NO NaN values
+  filter(V1 == 0) 
+
+
+```
+
+
+
+# Solution of iteratively removing columns with any NaN values before K-means
+- found via this link
+- https://stackoverflow.com/questions/12454487/remove-columns-from-dataframe-where-some-of-values-are-na
+
+```{r}
+# create object to pass into solution for removing columns that have any sort of NaN value
+scale(random_subset) -> sc_random
+
+
+sc_random[, colSums(is.nan(sc_random)) == 0] %>% 
+  as.data.frame() -> sc_random_df
+```
+
+```{r}
+# inspect new df
+head(sc_random_df)
+```
+
+## Run K-Means on Random Subset with no NAN values
+```{r}
+stats::kmeans(sc_random_df, 
+              centers = 239, 
+              #nstart = 10 # takes long time to run
+              ) -> kmeans_out
+```
+
+```{r}
+summary(kmeans_out)
+```
+
+#### The cluster sizes keep changing each time I run K-means and setting the seed would be an artifical, unrepresentative way to get it to produce stable output. 
+
+- Per article from Yang and Xu (2020), microbiome data have known problem of overdispersion and excessive zeros. 
+- This may be the reason that K-means is rather unstable.
+- From PCA analysis, no one dimension explained even 1 % of the data matrix, so perhaps another approach is in order. 
+
+- Below are the K-means sizes of clusters which keep changing dramatically.
+
+```{r}
+kmeans_out$size
+```
+
+- Re-running K-means on the subset of random rows and columns returns consistently unstable sizes of clusters. Setting the seed would be an artificial fix and wouldn't be a true representation of the bacterial groups. 
+
+- The solution in Wang and Xu (2020) is a different distance metric: medoids.
+- The article makes use of Partitioning Around Medoids (PAM) algorithm. 
+
+## PAM
+
+Documentation: https://www.rdocumentation.org/packages/cluster/versions/2.1.4/topics/pam
+
+- Review format of data frame:
+```{r}
+# review format of data
+# no id column
+# all numeric
+# scaled
+# reduced size of 400 x 1940
+head(sc_random_df)
+```
+
+```{r}
+library(cluster)
+pam(x=sc_random_df, # df where each row is coral sample obs
+    k = 239, # 239 explains at least 80 % from PCA
+    diss = F, #F = x is df of observationsnot dissim matrix
+    metric = "euclidean", # not manhattan
+    # may ocnsider changing to L1 norm if PAM with euclidean doesn't work out
+    #medoids = if(is.numeric(nstart)) "random",
+    #nstart = if(variant == "faster") 1 else NA,
+    stand = TRUE, # F = x is not standardized
+   # cluster.only = T,
+    do.swap = TRUE, # T = yes, do swap phase of algorithm
+    # keep.diss = !diss && !cluster.only && n < 100,
+    # keep.data = !diss && !cluster.only,
+    variant = "original" ,# c("original", "o_1", "o_2", "f_3", "f_4", "f_5", "faster"),
+   # pamonce = FALSE, 
+    trace.lev = 0) -> pam_out
+```
+
+
+```{r}
+pam_out %>% glimpse()
+
+summary(pam_out) -> pam_summary
+```
+
+```{r}
+pam_out$clusinfo
+```
+
+- Is the PAM algorithm giving stable results each time it's run?
+```{r}
+# re-run to compaure cluster sizes, etc. 
+pam(x=sc_random_df, # df where each row is coral sample obs
+    k = 239, # 239 explains at least 80 % from PCA
+    diss = F, #F = x is df of observationsnot dissim matrix
+    metric = "euclidean", # not manhattan
+    # may ocnsider changing to L1 norm if PAM with euclidean doesn't work out
+    #medoids = if(is.numeric(nstart)) "random",
+    #nstart = if(variant == "faster") 1 else NA,
+    stand = TRUE, # F = x is not standardized
+   # cluster.only = T,
+    do.swap = TRUE, # T = yes, do swap phase of algorithm
+    # keep.diss = !diss && !cluster.only && n < 100,
+    # keep.data = !diss && !cluster.only,
+    variant = "original" ,# c("original", "o_1", "o_2", "f_3", "f_4", "f_5", "faster"),
+   # pamonce = FALSE, 
+    trace.lev = 0) -> pam_out2
+```
+
+
+```{r}
+# are the clustering results the same?
+# if the two cluster info results objects have any mismatch FLASE values, then it will add them here
+sum(pam_out2$clusinfo != pam_out$clusinfo)
+```
+- The PAM algorithm seems to reproduce stable results for cluster assignments and sizes based on the smaller random sample of coral sample rows and ASV columns of dimension 200 x 400. 
+
+- One of the metrics for how well the unsupervised method is clustering is the average silhouette info. 
+
+```{r}
+pam_out$silinfo$avg.width
+```
+
+
+### Plot of PAM Results
+```{r}
+library(factoextra)
+
+fviz_cluster(pam_out, 
+             legend = "none"
+             )
+```
+- Visualize Silhouette Info
+
+```{r}
+fviz_silhouette(pam_out, 
+                legend = "none")
+```
+
+- From the documentation for fviz_silhouette() on pg 64 at link to PDF on CRAN: https://cran.r-project.org/web/packages/factoextra/factoextra.pdf
+
+-- "Observations with a large silhouhette Si (almost 1) are very well clustered. 
+-- A small Si (around 0) means that the observation lies between two clusters. 
+-- Observations with a negative Si are probably placed in the wrong cluster."
+
+**Interpretation based on this:  None of the Si values are close to 1; they are closer to 0. This clustering is most likely not clustering well.**
+
+**This was assuming that the PCA of 239 PCs was the best number of clusters to look for when clustering.**
+
+## NBClust - I do not think this is right
+- Using this source to attempt to find optimal number of clusters:
+https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/
+
+```{r}
+fviz_nbclust(sc_random_df, 
+             FUNcluster = pam,
+             method = "silhouette") -> nbclust_out
+```
+
+### Plot NBClust Results
+- The highest average silhouette width is indicated with the dashed line
+```{r}
+nbclust_out
+```
+
+## NBClust with Elbow Method
+```{r}
+fviz_nbclust(sc_random_df, 
+             FUNcluster = pam,
+             method = "wss") -> nbclust_out_elbow
+```
+
+```{r}
+nbclust_out_elbow
+```
+
+### Gap Statistic Method
+- Takes a very long time to run
+- Did not have available time and might need to try again later
+```{r}
+# fviz_nbclust(sc_random_df, 
+#              FUNcluster = pam,
+#              method = "gap_stat") -> nbclust_out_gap
+```
+

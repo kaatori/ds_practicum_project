@@ -78,7 +78,7 @@ importance_df %>%
   theme_bw()
 ```
 
-
+**Interpretation** - There are two bacteria strains that seem to be the most influencial. Many other bacteria contribute to explaining the variability of the original data but this levels off relatively quickly. This is indicated by the Cumulative Proportion increasing at a slower rate as the smaller principal components are added. 
 
 ```{r}
 fviz_pca_ind(pca_out_prop, 
@@ -105,7 +105,109 @@ importance_df %>%
 ```
 - Same number of PCs as before when first running PCA on counts-based data. See 'PCA_Revised_Bacteria.Rmd'. 
 
-- What happens if I don't scale the proportions? 
+- Which variables are doing what?
+```{r}
+pca_out_prop$rotation %>% 
+  as.data.frame()
+```
+
+
+```{r}
+get_pca_var(pca_out_prop) -> vars_prop
+```
+
+- Below is accessing what variables contribute to which dimension: 
+```{r}
+vars_prop$contrib %>% as.data.frame() %>% 
+  select(`Dim.1`) %>% 
+  arrange(-`Dim.1`)
+```
+
+- Plotting the Top 20 ASVs that contribute the most to dimension 1: 
+```{r}
+fviz_contrib(pca_out_prop, 
+             choice = "var", 
+             axes = 1,
+             top = 20)
+```
+- Red dashed line represents the expected average contribution. The expected average contribution of each ASV is very low.
+
+- Notice that the max on the y-axis is 0.6 %, so re-plot more to see how adding more changes the % of contribution. Even plotting 50, 70, on up to 100 ASVs still lever gets above 0.6 %:
+
+```{r}
+fviz_contrib(pca_out_prop, 
+             choice = "var", 
+             axes = 1,
+             top = 100)
+```
+
+- Plot of Dim 2: 
+```{r}
+fviz_contrib(pca_out_prop, 
+             choice = "var", 
+             axes = 2,
+             top = 20)
+```
+
+- Coordinates of Variables
+```{r}
+vars_prop$coord %>% as.data.frame()
+```
+
+- Plot of coordinates for variables
+
+```{r}
+fviz_pca_var(pca_out_prop, 
+             col.var = "contrib", 
+             alpha.var = .5,
+             #repel = TRUE,
+             title = "Proportion-based, Scaled Bacteria PCA Results \nTop 100 Contributors",
+             select.var = list(contrib = 100))
+```
+Notes on how to interpret: 
+
+Positively correlated variables are grouped together.
+Negatively correlated variables are positioned on opposite sides of the plot origin (opposed quadrants).
+The distance between variables and the origin measures the quality of the variables on the factor map. Variables that are away from the origin are well represented on the factor map.
+
+Source: http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/112-pca-principal-component-analysis-essentials/#graph-of-variables 
+
+- Get Eigenvalues/Variances
+```{r}
+eigen_prop <- get_eigenvalue(pca_out_prop)
+```
+
+- Eigenvalues can be used to retain the number of components to keep after PCA
+- Same as 239 from importance for at least 80 %
+- For 90 %:  345 components at least
+```{r}
+eigen_prop %>% 
+  filter(cumulative.variance.percent >= 80)
+
+eigen_prop %>% 
+  filter(cumulative.variance.percent >= 90)
+```
+
+- Screeplot of Eigenvalues
+```{r}
+fviz_eig(pca_out_prop, addlabels = TRUE)
+```
+
+- How to get list of Dimension 1 Variables?
+```{r}
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+### What happens if I don't scale the proportions? 
 ```{r}
 stats::prcomp(rev_bacteria_prop_df[,-1]) -> pca_out_prop_NS
 ```
@@ -150,4 +252,38 @@ imp2_matrix %>%
 
 
 
+
+
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
 

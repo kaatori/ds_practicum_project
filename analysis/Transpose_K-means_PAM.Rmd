@@ -1,0 +1,231 @@
+---
+title: "Transpose_K-means_PAM"
+author: "Cassandra Sperow"
+date: "2023-10-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stats)
+setwd("/Users/kasan/AU My Drive/001__DATA_793/R_dir_Corals_")
+suppressMessages(library(tidyverse))
+```
+
+## Transpose the Data Matrix to Attempt Better Results from K-Means and PAM
+- Bacteria are what we're trying to cluster
+- Transpose to where the bacteria ASVs are the rows instead of the columns
+
+### Read in proportion-based bacteria data
+```{r}
+# read in the new proportion-based bacteria data
+read_csv("../output/rev_bacteria_prop_df.csv") -> rev_bacteria_prop_df
+
+head(rev_bacteria_prop_df)
+```
+
+#### Transpose for Bacteria to be Observations
+```{r}
+rev_bacteria_prop_df %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  janitor::row_to_names(1) %>% 
+  map(., ~as.numeric(.)) %>% 
+  as.data.frame() -> t_rev_bac_prop
+```
+
+### Review data format
+```{r}
+dim(t_rev_bac_prop)
+head(t_rev_bac_prop)
+#glimpse(t_rev_bac_prop)
+```
+
+
+
+## K-Means
+- First run gave warning of not converging in 10 iterations
+- Increased max iterations to 50
+- Re-run a few times to see if it's stable
+```{r}
+kmeans( scale(t_rev_bac_prop) , 
+       centers = 239,  # PCA Results
+       iter.max = 50
+) -> t_kmeans_out
+```
+
+
+```{r}
+t_kmeans_out$size
+```
+
+
+```{r}
+kmeans( scale(t_rev_bac_prop) , 
+       centers = 239,  # PCA Results
+       iter.max = 50
+) -> t_kmeans_out_2
+
+
+t_kmeans_out_2$size
+```
+
+- 3rd time
+```{r}
+kmeans( scale(t_rev_bac_prop) , 
+       centers = 239,  # PCA Results
+       iter.max = 50
+) -> t_kmeans_out_3
+
+
+t_kmeans_out_3$size
+```
+
+- K-means Results give different sizes and clusters each time 
+- The one thing that is a bit stable and better is that there seems to be a cluster with ~4K for each of the 3 runs above.
+- Not stable enough
+- What if it's done for 20 clusters since original March publication listed top 20 ASVs?
+
+```{r}
+kmeans( scale(t_rev_bac_prop) , 
+       centers = 20,  # PCA Results
+       iter.max = 50
+) -> t_kmeans_out_20
+
+t_kmeans_out_20$size
+
+kmeans( scale(t_rev_bac_prop) , 
+       centers = 20,  # PCA Results
+       iter.max = 50
+) -> t_kmeans_out_20_1
+
+t_kmeans_out_20_1$size
+```
+
+- No, this is not helping because it's placing ~5K into one cluster and then the other clusters don't have many.
+
+## PAM
+
+- Running on the whole dataset takes a long time
+- Adjusting some parameters for quicker runtime per documentation
+```{r}
+library(cluster)
+pam(x = scale(t_rev_bac_prop), # scale and standardize
+    k = 239, # 239 explains at least 80 % from PCA
+    diss = F, #F = x is df of observations not dissim matrix
+    metric = "euclidean", # not manhattan
+    # may ocnsider changing to L1 norm if PAM with euclidean doesn't work out
+    #medoids = if(is.numeric(nstart)) "random",
+    #nstart = if(variant == "faster") 1 else NA,
+    stand = TRUE, # F = x is not standardized
+   # cluster.only = T,
+    do.swap = TRUE, # T = yes, do swap phase of algorithm
+    # keep.diss = !diss && !cluster.only && n < 100,
+    # keep.data = !diss && !cluster.only,
+    variant = "faster" ,# c("original", "o_1", "o_2", "f_3", "f_4", "f_5", "faster"),
+   # pamonce = FALSE, 
+    trace.lev = 0) -> t_pam_out
+```
+
+
+```{r}
+t_pam_out$silinfo$avg.width
+
+plot(silhouette(t_pam_out))
+```
+
+
+```{r}
+fviz_cluster(t_pam_out, 
+             legend = "none"
+             )
+```
+- From the previous run in the previous file called 'K-means_PAM.Rmd' where the data were not transposed to have bacteria as observation rows, the Dim1 was 2.4% and the Dim 2 was 2%
+
+- Maybe I should also do PCA again based on transposed rows for bacteria?
+
+- But first, is a nother run of PAM going to give similar or same results and be stable?
+```{r}
+library(cluster)
+pam(x = scale(t_rev_bac_prop), # scale and standardize
+    k = 239, # 239 explains at least 80 % from PCA
+    diss = F, #F = x is df of observations not dissim matrix
+    metric = "euclidean", # not manhattan
+    # may ocnsider changing to L1 norm if PAM with euclidean doesn't work out
+    #medoids = if(is.numeric(nstart)) "random",
+    #nstart = if(variant == "faster") 1 else NA,
+    stand = TRUE, # F = x is not standardized
+   # cluster.only = T,
+    do.swap = TRUE, # T = yes, do swap phase of algorithm
+    # keep.diss = !diss && !cluster.only && n < 100,
+    # keep.data = !diss && !cluster.only,
+    variant = "faster" ,# c("original", "o_1", "o_2", "f_3", "f_4", "f_5", "faster"),
+   # pamonce = FALSE, 
+    trace.lev = 0) -> t_pam_out_2
+
+
+
+```
+
+```{r}
+# first run
+t_pam_out$silinfo$avg.width
+# second run - the average width is going up
+# but there are some ave widths with negative values
+# which from documentation means they are probably classified wrong
+t_pam_out_2$silinfo$avg.width
+```
+
+```{r}
+fviz_silhouette(t_pam_out_2, 
+                legend = "none")
+```
+
+### Run PAM with 20 clusters to see if it simplifies
+```{r}
+pam(x = scale(t_rev_bac_prop), # scale and standardize
+    k = 20, # 239 explains at least 80 % from PCA
+    diss = F, #F = x is df of observations not dissim matrix
+    metric = "euclidean", # not manhattan
+    # may ocnsider changing to L1 norm if PAM with euclidean doesn't work out
+    #medoids = if(is.numeric(nstart)) "random",
+    #nstart = if(variant == "faster") 1 else NA,
+    stand = TRUE, # F = x is not standardized
+   # cluster.only = T,
+    do.swap = TRUE, # T = yes, do swap phase of algorithm
+    # keep.diss = !diss && !cluster.only && n < 100,
+    # keep.data = !diss && !cluster.only,
+    variant = "faster" ,# c("original", "o_1", "o_2", "f_3", "f_4", "f_5", "faster"),
+   # pamonce = FALSE, 
+    trace.lev = 0) -> t_pam_out_20
+```
+
+
+```{r}
+t_pam_out_20$silinfo$avg.width
+```
+- Wow, this is much better than before
+
+- Can the NBClust find better?
+```{r}
+library(NbClust)
+fviz_nbclust(x = scale(t_rev_bac_prop), 
+             FUNcluster = pam,
+             method = "silhouette"
+             ) -> nbclust_pam_out
+
+```
+
+
+```{r}
+nbclust_pam_out
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
