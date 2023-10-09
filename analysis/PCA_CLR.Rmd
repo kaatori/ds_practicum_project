@@ -1,0 +1,125 @@
+---
+title: "PCA_CLR_based_data"
+author: "Cassandra Sperow"
+date: "2023-10-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
+```
+
+## 
+```{r}
+read_csv("../output/clr_bac_df.csv") -> clr_bac_df
+```
+
+
+```{r}
+head(clr_bac_df) # not scaled, only clr transformation
+```
+
+```{r}
+stats::prcomp(clr_bac_df, scale. = T) -> pca_out_clr
+
+```
+
+
+```{r}
+screeplot(pca_out_clr)
+```
+
+
+```{r}
+library(factoextra)
+fviz_pca_var(pca_out_clr, 
+             #col.var = "steelblue", 
+             col.var = "contrib", 
+             gradient.cols = c("red", "blue", "green"), 
+            # repel = T, 
+            label = "none",
+             title = "All Variables in PCA using CLR Transformation")
+```
+
+
+```{r}
+summary(pca_out_clr)$importance %>% as_tibble() -> importance_matrix
+
+```
+
+
+```{r}
+bind_cols(
+  name = c("StndDev", "IndivProp", "CumProp"), 
+  importance_matrix
+) -> importance_df
+```
+
+
+```{r}
+importance_df %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  janitor::row_to_names(1) %>% 
+  ggplot(aes(x = as.numeric(CumProp) , y =  as.numeric(IndivProp))) +
+  geom_point() +
+  ggtitle("PCA Results: Proportion of Variance", "This is a better screeplot showing all PCs on CLR-based scaled data") +
+  xlab("Cumulative Proportion") +
+  ylab("Proportion of Variance per Principal Component") +
+  theme_bw()
+```
+
+
+- How many PCs contribute at least 80 % ? 361
+```{r}
+importance_df %>% 
+  # pivoting data drame so that cumulatives are in column
+  t() %>%  as.data.frame() %>% 
+  # moving up top row as column header
+  janitor::row_to_names(1) %>% ######## snapshot here for presentation
+  # filtering cumulative proportion column for greater > = 80 %
+  filter(CumProp >= 0.8)
+```
+
+
+- How to combine this with K-means?
+- Source: https://medium.com/@zullinira23/implementation-of-principal-component-analysis-pca-on-k-means-clustering-in-r-794f03ec15f
+```{r}
+bac_transform = as.data.frame(-pca_out_clr$x[,1:361])
+
+head(bac_transform)
+
+fviz_nbclust(bac_transform, kmeans, method = 'wss', k.max = 400) -> test_out
+fviz_nbclust(bac_transform, kmeans, method = 'silhouette', k.max = 400) -> test_out2
+#fviz_nbclust(bac_transform, kmeans, method = 'gap_stat') -> test_out3 ## no convergence
+
+
+test_out
+test_out2
+```
+
+- Average siljouette widths seem low
+- They should be close to 1 if clustering is work well.
+
+```{r}
+glimpse(test_out)
+```
+
+
+```{r}
+summary(test_out)
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+

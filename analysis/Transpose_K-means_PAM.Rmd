@@ -25,6 +25,7 @@ head(rev_bacteria_prop_df)
 ```
 
 #### Transpose for Bacteria to be Observations
+- This is still using proportions before the call with Dr. C on using CLR or coseq library that does logCLR
 ```{r}
 rev_bacteria_prop_df %>% 
   t() %>% 
@@ -136,6 +137,7 @@ plot(silhouette(t_pam_out))
 
 
 ```{r}
+library(factoextra)
 fviz_cluster(t_pam_out, 
              legend = "none"
              )

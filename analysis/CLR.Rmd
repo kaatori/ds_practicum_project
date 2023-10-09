@@ -1,0 +1,56 @@
+---
+title: "CLR"
+author: "Cassandra Sperow"
+date: "2023-10-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
+```
+
+## CLR: Centered Log Ratio
+Documentation: 
+https://www.rdocumentation.org/packages/compositions/versions/2.0-6/topics/clr
+- Based on importing raw counts
+- Transforms compositional data, such as bacterial abundances, into centered log ratios
+```{r}
+# read in count-based data
+read_csv("../output/rev_bacteria.csv") -> rev_bacteria
+```
+
+
+```{r}
+# import library and transform to CLR
+library(compositions)
+clr(rev_bacteria[, -1]) -> clr_bac
+```
+
+
+```{r}
+dim(clr_bac)
+```
+
+```{r}
+class(clr_bac)
+```
+
+```{r}
+clr_bac %>% as.data.frame() -> clr_bac_df
+```
+
+```{r}
+write_csv(clr_bac_df, "../output/clr_bac_df.csv") # no sample column
+```
+
+
+
+
+```{r}
+```
+
+
+```{r}
+```
+

@@ -17,7 +17,8 @@ library(tidyverse)
 - See publication: https://arxiv.org/pdf/1704.06150.pdf
 
 #### Read in count-based data and transpose according to what the package documentation states: 
-- Takes a matrix of data.frame of gene-level or ASV-level counts of dimension n x d where n= genes or ASVs and d=samples: 
+- Takes a matrix of data.frame of gene-level or ASV-level counts of dimension n x d 
+- where n= genes or ASVs as rows and d=samples as columns: 
 ```{r}
 read_csv("../output/rev_bacteria.csv") -> rev_bacteria
 
@@ -38,6 +39,17 @@ rev_bacteria %>%
 https://www.bioconductor.org/packages/devel/bioc/vignettes/coseq/inst/doc/coseq.html
 ```{r}
 head(t_rev_bacteria_counts)
+```
+## Write transposed raw counts df to file for usage later
+```{r}
+# but first get names of ASVs into column
+names(rev_bacteria[-1]) -> names_column
+
+bind_cols(names_column, 
+          t_rev_bacteria_counts) -> t_rev_bacteria_counts
+
+write_csv(t_rev_bacteria_counts, "../output/t_rev_bacteria_counts.csv") # no ASV name column but they are in original order
+
 ```
 
 #### Quick Start Guide for ```coseq``` package
@@ -73,11 +85,13 @@ assay(coseq_out) %>% as.data.frame()
 ```{r}
 class(coseq_out)
 
-plot(coseq_out)
+#plot(coseq_out)
+glimpse(coseq_out)
 ```
 
 - Per article below, for K-Means, "...the use of untransformed or logCLR-transformed data with K-means thus appears to be a more coherent choice." pg. 12
 link: https://arxiv.org/pdf/1704.06150.pdf
+
 #### CLR Transformation
 - Dr. C advised to use this transformation from the raw counts to the centered log ratio (CLR)
 - increasing the max iter
