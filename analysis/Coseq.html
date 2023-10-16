@@ -371,7 +371,8 @@ clustering with better perofrmance on compositional data</h3>
 documentation states:</h4>
 <ul>
 <li>Takes a matrix of data.frame of gene-level or ASV-level counts of
-dimension n x d where n= genes or ASVs and d=samples:</li>
+dimension n x d</li>
+<li>where n= genes or ASVs as rows and d=samples as columns:</li>
 </ul>
 <pre class="r"><code>read_csv(&quot;../output/rev_bacteria.csv&quot;) -&gt; rev_bacteria</code></pre>
 <pre><code>## Rows: 659 Columns: 5890
@@ -1063,13 +1064,55 @@ dimension n x d where n= genes or ASVs and d=samples:</li>
 ## 5          0
 ## 6          0</code></pre>
 </div>
+</div>
+<div id="write-transposed-raw-counts-df-to-file-for-usage-later" class="section level2">
+<h2>Write transposed raw counts df to file for usage later</h2>
+<pre class="r"><code># but first get names of ASVs into column
+names(rev_bacteria[-1]) -&gt; names_column
+
+bind_cols(names_column, 
+          t_rev_bacteria_counts) -&gt; t_rev_bacteria_counts</code></pre>
+<pre><code>## New names:
+## • `` -&gt; `...1`</code></pre>
+<pre class="r"><code>write_csv(t_rev_bacteria_counts, &quot;../output/t_rev_bacteria_counts.csv&quot;) # no ASV name column but they are in original order</code></pre>
 <div id="quick-start-guide-for-coseq-package" class="section level4">
 <h4>Quick Start Guide for <code>coseq</code> package</h4>
 <ul>
 <li>It may necessary for new users to go through the commands on this
 page to set up Bioconductor and coseq: <a href="https://www.bioconductor.org/install/" class="uri">https://www.bioconductor.org/install/</a></li>
-<li>Number of K and max iterations are low to try out method first</li>
+<li>Number of K and max iterations are low to try out method first Note:
+### Optional start here, read in in previously transposed data</li>
 </ul>
+<pre class="r"><code># includes ASV name column
+readr::read_csv( &quot;../output/t_rev_bacteria_counts.csv&quot;) -&gt; t_rev_bacteria_counts  </code></pre>
+<pre><code>## Rows: 5889 Columns: 660
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr   (1): ...1
+## dbl (659): SMAQ.R1.1, SMAQ.R1.2, SMAQ.R1.3, SMAQ.R1.4, SMAQ.R1.5, SMAQ.R1.6,...
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>head(t_rev_bacteria_counts)</code></pre>
+<pre><code>## # A tibble: 6 × 660
+##   ...1    SMAQ.R1.1 SMAQ.R1.2 SMAQ.R1.3 SMAQ.R1.4 SMAQ.R1.5 SMAQ.R1.6 SMAQ.R1.7
+##   &lt;chr&gt;       &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+## 1 ASV0001     18882      5569      2910     21262     14855     44453     38637
+## 2 ASV0002         0         0         0         0         0         0         0
+## 3 ASV0003         0         0       126         0         0         0         0
+## 4 ASV0004       320      2200       881       486      1842       734       828
+## 5 ASV0005      8742     20914     24521     12111     28347      3263      3534
+## 6 ASV0006      6211     14087     15744      7410     13910      1787      1888
+## # ℹ 652 more variables: SMAQ.R1.8 &lt;dbl&gt;, SMAQ.R1.10 &lt;dbl&gt;, SMAQ.R1.11 &lt;dbl&gt;,
+## #   SMAQ.R1.12 &lt;dbl&gt;, SMAQ.R1.14 &lt;dbl&gt;, SMAQ.R1.15 &lt;dbl&gt;, SMAQ.R1.19 &lt;dbl&gt;,
+## #   SMAQ.R1.23 &lt;dbl&gt;, SMAQ.R1.24 &lt;dbl&gt;, SMAQ.R1.25 &lt;dbl&gt;, SMAQ.R1.28 &lt;dbl&gt;,
+## #   SMAQ.R1.29 &lt;dbl&gt;, SMAQ.R2.16 &lt;dbl&gt;, SMAQ.R2.33 &lt;dbl&gt;, SMAQ.R2.3 &lt;dbl&gt;,
+## #   SMAQ.R2.6 &lt;dbl&gt;, SMAQ.R2.7 &lt;dbl&gt;, SMAQ.R2.8 &lt;dbl&gt;, SMAQ.R2.9 &lt;dbl&gt;,
+## #   SMAQ.R2.10 &lt;dbl&gt;, SMAQ.R2.11 &lt;dbl&gt;, SMAQ.R2.13 &lt;dbl&gt;, SMAQ.R2.14 &lt;dbl&gt;,
+## #   SMAQ.R2.17 &lt;dbl&gt;, SMAQ.R2.18 &lt;dbl&gt;, SMAQ.R2.20 &lt;dbl&gt;, SMAQ.R2.37 &lt;dbl&gt;, …</code></pre>
+</div>
+<div id="logclr-with-k-means-using-coseq" class="section level3">
+<h3>LogCLR with K-Means using <code>coseq</code></h3>
 <pre class="r"><code>library(coseq)</code></pre>
 <pre><code>## Loading required package: SummarizedExperiment</code></pre>
 <pre><code>## Loading required package: MatrixGenerics</code></pre>
@@ -1177,10 +1220,10 @@ page to set up Bioconductor and coseq: <a href="https://www.bioconductor.org/ins
 ## 
 ##     plot</code></pre>
 <pre class="r"><code># try the default method suggested by documentation
-# number of iter and number of lcusters is low to try out method
-coseq(t_rev_bacteria_counts,
-      K=2:25, 
-      transformation=&quot;logclr&quot;,
+# number of iter and number of clusters is low to try out method
+coseq(t_rev_bacteria_counts[, -1], # take out ASV names in 1st column
+      K=2:25, # experiment with low number
+      transformation=&quot;logclr&quot;, # recommended from research article
       norm=&quot;TMM&quot;, 
       meanFilterCutoff=50, 
       model=&quot;kmeans&quot;,
@@ -1223,197 +1266,201 @@ summary(coseq_out)</code></pre>
 ## *************************************************
 ## Clusters fit: 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25
 ## Clusters with errors: ---
-## Selected number of clusters via capushe: 2
+## Selected number of clusters via capushe: 6
 ## *************************************************
-## Number of clusters = 2
+## Number of clusters = 6
 ## *************************************************
 ## Cluster sizes:
-## Cluster 1 Cluster 2 
-##       159        15</code></pre>
-<pre class="r"><code># cluster results
+## Cluster 1 Cluster 2 Cluster 3 Cluster 4 Cluster 5 Cluster 6 
+##        95        19        12        30         8        10</code></pre>
+<pre class="r"><code># cluster results are putting the samples into two primary clusters
 clusters(coseq_out) </code></pre>
-<pre><code>##   [1] 1 1 1 1 2 2 1 1 1 1 1 1 1 1 1 1 1 2 2 2 1 2 2 1 1 1 1 1 1 1 2 1 1 1 1 1 1
-##  [38] 2 2 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1
-##  [75] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2
-## [112] 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-## [149] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</code></pre>
+<pre><code>##   [1] 1 3 6 3 5 2 1 3 1 2 1 3 6 6 3 6 3 5 5 5 3 2 2 2 2 2 2 1 3 4 5 3 1 1 3 2 1
+##  [38] 5 1 1 6 1 6 1 5 1 3 4 4 4 1 6 1 4 1 2 2 2 4 1 1 1 1 1 2 4 4 1 2 1 6 1 1 1
+##  [75] 1 6 1 1 1 1 1 1 1 1 4 1 1 1 1 1 6 4 1 1 1 1 4 1 1 1 1 1 1 4 1 1 4 1 1 1 5
+## [112] 1 1 1 1 1 4 4 1 1 4 4 1 1 1 1 1 1 4 3 1 1 1 4 2 4 1 1 1 1 1 1 1 4 1 1 1 2
+## [149] 4 4 1 2 2 4 1 1 4 1 2 4 1 4 1 1 4 1 4 1 1 4 1 1 1 1</code></pre>
+<ul>
+<li>There are two species of coral in dataset</li>
+<li>Maybe this is why it found 2 clusters</li>
+</ul>
 <pre class="r"><code># conditional probabilities of cluster membership
 assay(coseq_out) %&gt;% as.data.frame()</code></pre>
-<pre><code>##     Cluster_1 Cluster_2
-## 1           1         0
-## 2           1         0
-## 3           1         0
-## 4           1         0
-## 5           0         1
-## 6           0         1
-## 7           1         0
-## 8           1         0
-## 9           1         0
-## 10          1         0
-## 11          1         0
-## 12          1         0
-## 13          1         0
-## 14          1         0
-## 15          1         0
-## 16          1         0
-## 17          1         0
-## 18          0         1
-## 19          0         1
-## 20          0         1
-## 21          1         0
-## 22          0         1
-## 23          0         1
-## 24          1         0
-## 25          1         0
-## 26          1         0
-## 27          1         0
-## 28          1         0
-## 29          1         0
-## 30          1         0
-## 31          0         1
-## 32          1         0
-## 33          1         0
-## 34          1         0
-## 35          1         0
-## 36          1         0
-## 37          1         0
-## 38          0         1
-## 39          0         1
-## 40          1         0
-## 41          1         0
-## 42          1         0
-## 43          1         0
-## 44          1         0
-## 45          0         1
-## 46          1         0
-## 47          1         0
-## 48          1         0
-## 49          1         0
-## 50          1         0
-## 51          1         0
-## 52          1         0
-## 53          1         0
-## 54          1         0
-## 55          1         0
-## 56          1         0
-## 57          0         1
-## 58          1         0
-## 59          1         0
-## 60          1         0
-## 61          1         0
-## 62          1         0
-## 63          1         0
-## 64          1         0
-## 65          1         0
-## 66          1         0
-## 67          1         0
-## 68          0         1
-## 69          1         0
-## 70          1         0
-## 71          1         0
-## 72          1         0
-## 73          1         0
-## 74          1         0
-## 75          1         0
-## 76          1         0
-## 77          1         0
-## 78          1         0
-## 79          1         0
-## 80          1         0
-## 81          1         0
-## 82          1         0
-## 83          1         0
-## 84          1         0
-## 85          1         0
-## 86          1         0
-## 87          1         0
-## 88          1         0
-## 89          1         0
-## 90          1         0
-## 91          1         0
-## 92          1         0
-## 93          1         0
-## 94          1         0
-## 95          1         0
-## 96          1         0
-## 97          1         0
-## 98          1         0
-## 99          1         0
-## 100         1         0
-## 101         1         0
-## 102         1         0
-## 103         1         0
-## 104         1         0
-## 105         1         0
-## 106         1         0
-## 107         1         0
-## 108         1         0
-## 109         1         0
-## 110         1         0
-## 111         0         1
-## 112         1         0
-## 113         1         0
-## 114         0         1
-## 115         1         0
-## 116         1         0
-## 117         1         0
-## 118         1         0
-## 119         1         0
-## 120         1         0
-## 121         1         0
-## 122         1         0
-## 123         1         0
-## 124         1         0
-## 125         1         0
-## 126         1         0
-## 127         1         0
-## 128         1         0
-## 129         1         0
-## 130         1         0
-## 131         1         0
-## 132         1         0
-## 133         1         0
-## 134         1         0
-## 135         1         0
-## 136         1         0
-## 137         1         0
-## 138         1         0
-## 139         1         0
-## 140         1         0
-## 141         1         0
-## 142         1         0
-## 143         1         0
-## 144         1         0
-## 145         1         0
-## 146         1         0
-## 147         1         0
-## 148         1         0
-## 149         1         0
-## 150         1         0
-## 151         1         0
-## 152         1         0
-## 153         1         0
-## 154         1         0
-## 155         1         0
-## 156         1         0
-## 157         1         0
-## 158         1         0
-## 159         1         0
-## 160         1         0
-## 161         1         0
-## 162         1         0
-## 163         1         0
-## 164         1         0
-## 165         1         0
-## 166         1         0
-## 167         1         0
-## 168         1         0
-## 169         1         0
-## 170         1         0
-## 171         1         0
-## 172         1         0
-## 173         1         0
-## 174         1         0</code></pre>
+<pre><code>##     Cluster_1 Cluster_2 Cluster_3 Cluster_4 Cluster_5 Cluster_6
+## 1           1         0         0         0         0         0
+## 2           0         0         1         0         0         0
+## 3           0         0         0         0         0         1
+## 4           0         0         1         0         0         0
+## 5           0         0         0         0         1         0
+## 6           0         1         0         0         0         0
+## 7           1         0         0         0         0         0
+## 8           0         0         1         0         0         0
+## 9           1         0         0         0         0         0
+## 10          0         1         0         0         0         0
+## 11          1         0         0         0         0         0
+## 12          0         0         1         0         0         0
+## 13          0         0         0         0         0         1
+## 14          0         0         0         0         0         1
+## 15          0         0         1         0         0         0
+## 16          0         0         0         0         0         1
+## 17          0         0         1         0         0         0
+## 18          0         0         0         0         1         0
+## 19          0         0         0         0         1         0
+## 20          0         0         0         0         1         0
+## 21          0         0         1         0         0         0
+## 22          0         1         0         0         0         0
+## 23          0         1         0         0         0         0
+## 24          0         1         0         0         0         0
+## 25          0         1         0         0         0         0
+## 26          0         1         0         0         0         0
+## 27          0         1         0         0         0         0
+## 28          1         0         0         0         0         0
+## 29          0         0         1         0         0         0
+## 30          0         0         0         1         0         0
+## 31          0         0         0         0         1         0
+## 32          0         0         1         0         0         0
+## 33          1         0         0         0         0         0
+## 34          1         0         0         0         0         0
+## 35          0         0         1         0         0         0
+## 36          0         1         0         0         0         0
+## 37          1         0         0         0         0         0
+## 38          0         0         0         0         1         0
+## 39          1         0         0         0         0         0
+## 40          1         0         0         0         0         0
+## 41          0         0         0         0         0         1
+## 42          1         0         0         0         0         0
+## 43          0         0         0         0         0         1
+## 44          1         0         0         0         0         0
+## 45          0         0         0         0         1         0
+## 46          1         0         0         0         0         0
+## 47          0         0         1         0         0         0
+## 48          0         0         0         1         0         0
+## 49          0         0         0         1         0         0
+## 50          0         0         0         1         0         0
+## 51          1         0         0         0         0         0
+## 52          0         0         0         0         0         1
+## 53          1         0         0         0         0         0
+## 54          0         0         0         1         0         0
+## 55          1         0         0         0         0         0
+## 56          0         1         0         0         0         0
+## 57          0         1         0         0         0         0
+## 58          0         1         0         0         0         0
+## 59          0         0         0         1         0         0
+## 60          1         0         0         0         0         0
+## 61          1         0         0         0         0         0
+## 62          1         0         0         0         0         0
+## 63          1         0         0         0         0         0
+## 64          1         0         0         0         0         0
+## 65          0         1         0         0         0         0
+## 66          0         0         0         1         0         0
+## 67          0         0         0         1         0         0
+## 68          1         0         0         0         0         0
+## 69          0         1         0         0         0         0
+## 70          1         0         0         0         0         0
+## 71          0         0         0         0         0         1
+## 72          1         0         0         0         0         0
+## 73          1         0         0         0         0         0
+## 74          1         0         0         0         0         0
+## 75          1         0         0         0         0         0
+## 76          0         0         0         0         0         1
+## 77          1         0         0         0         0         0
+## 78          1         0         0         0         0         0
+## 79          1         0         0         0         0         0
+## 80          1         0         0         0         0         0
+## 81          1         0         0         0         0         0
+## 82          1         0         0         0         0         0
+## 83          1         0         0         0         0         0
+## 84          1         0         0         0         0         0
+## 85          0         0         0         1         0         0
+## 86          1         0         0         0         0         0
+## 87          1         0         0         0         0         0
+## 88          1         0         0         0         0         0
+## 89          1         0         0         0         0         0
+## 90          1         0         0         0         0         0
+## 91          0         0         0         0         0         1
+## 92          0         0         0         1         0         0
+## 93          1         0         0         0         0         0
+## 94          1         0         0         0         0         0
+## 95          1         0         0         0         0         0
+## 96          1         0         0         0         0         0
+## 97          0         0         0         1         0         0
+## 98          1         0         0         0         0         0
+## 99          1         0         0         0         0         0
+## 100         1         0         0         0         0         0
+## 101         1         0         0         0         0         0
+## 102         1         0         0         0         0         0
+## 103         1         0         0         0         0         0
+## 104         0         0         0         1         0         0
+## 105         1         0         0         0         0         0
+## 106         1         0         0         0         0         0
+## 107         0         0         0         1         0         0
+## 108         1         0         0         0         0         0
+## 109         1         0         0         0         0         0
+## 110         1         0         0         0         0         0
+## 111         0         0         0         0         1         0
+## 112         1         0         0         0         0         0
+## 113         1         0         0         0         0         0
+## 114         1         0         0         0         0         0
+## 115         1         0         0         0         0         0
+## 116         1         0         0         0         0         0
+## 117         0         0         0         1         0         0
+## 118         0         0         0         1         0         0
+## 119         1         0         0         0         0         0
+## 120         1         0         0         0         0         0
+## 121         0         0         0         1         0         0
+## 122         0         0         0         1         0         0
+## 123         1         0         0         0         0         0
+## 124         1         0         0         0         0         0
+## 125         1         0         0         0         0         0
+## 126         1         0         0         0         0         0
+## 127         1         0         0         0         0         0
+## 128         1         0         0         0         0         0
+## 129         0         0         0         1         0         0
+## 130         0         0         1         0         0         0
+## 131         1         0         0         0         0         0
+## 132         1         0         0         0         0         0
+## 133         1         0         0         0         0         0
+## 134         0         0         0         1         0         0
+## 135         0         1         0         0         0         0
+## 136         0         0         0         1         0         0
+## 137         1         0         0         0         0         0
+## 138         1         0         0         0         0         0
+## 139         1         0         0         0         0         0
+## 140         1         0         0         0         0         0
+## 141         1         0         0         0         0         0
+## 142         1         0         0         0         0         0
+## 143         1         0         0         0         0         0
+## 144         0         0         0         1         0         0
+## 145         1         0         0         0         0         0
+## 146         1         0         0         0         0         0
+## 147         1         0         0         0         0         0
+## 148         0         1         0         0         0         0
+## 149         0         0         0         1         0         0
+## 150         0         0         0         1         0         0
+## 151         1         0         0         0         0         0
+## 152         0         1         0         0         0         0
+## 153         0         1         0         0         0         0
+## 154         0         0         0         1         0         0
+## 155         1         0         0         0         0         0
+## 156         1         0         0         0         0         0
+## 157         0         0         0         1         0         0
+## 158         1         0         0         0         0         0
+## 159         0         1         0         0         0         0
+## 160         0         0         0         1         0         0
+## 161         1         0         0         0         0         0
+## 162         0         0         0         1         0         0
+## 163         1         0         0         0         0         0
+## 164         1         0         0         0         0         0
+## 165         0         0         0         1         0         0
+## 166         1         0         0         0         0         0
+## 167         0         0         0         1         0         0
+## 168         1         0         0         0         0         0
+## 169         1         0         0         0         0         0
+## 170         0         0         0         1         0         0
+## 171         1         0         0         0         0         0
+## 172         1         0         0         0         0         0
+## 173         1         0         0         0         0         0
+## 174         1         0         0         0         0         0</code></pre>
 <pre class="r"><code>class(coseq_out)</code></pre>
 <pre><code>## [1] &quot;coseqResults&quot;
 ## attr(,&quot;package&quot;)
@@ -1422,17 +1469,17 @@ assay(coseq_out) %&gt;% as.data.frame()</code></pre>
 glimpse(coseq_out)</code></pre>
 <pre><code>## Formal class &#39;coseqResults&#39; [package &quot;coseq&quot;] with 12 slots
 ##   ..@ allResults     :List of 24
-##   .. ..$ K=2 : num [1:174, 1:2] 1 1 1 1 0 0 1 1 1 1 ...
+##   .. ..$ K=2 : num [1:174, 1:2] 1 0 0 0 1 1 1 0 1 1 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
-##   .. ..$ K=3 : num [1:174, 1:3] 1 0 0 0 1 1 1 0 1 0 ...
+##   .. ..$ K=3 : num [1:174, 1:3] 0 1 1 1 0 0 0 1 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
-##   .. ..$ K=4 : num [1:174, 1:4] 1 0 0 0 1 1 1 0 1 0 ...
+##   .. ..$ K=4 : num [1:174, 1:4] 0 0 0 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
-##   .. ..$ K=5 : num [1:174, 1:5] 0 0 0 0 0 1 0 0 0 1 ...
+##   .. ..$ K=5 : num [1:174, 1:5] 0 0 0 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
-##   .. ..$ K=6 : num [1:174, 1:6] 0 1 1 1 0 0 0 1 0 0 ...
+##   .. ..$ K=6 : num [1:174, 1:6] 1 0 0 0 0 0 1 0 1 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
-##   .. ..$ K=7 : num [1:174, 1:7] 0 0 0 0 0 0 0 0 0 0 ...
+##   .. ..$ K=7 : num [1:174, 1:7] 0 0 1 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
 ##   .. ..$ K=8 : num [1:174, 1:8] 0 0 0 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
@@ -1446,19 +1493,19 @@ glimpse(coseq_out)</code></pre>
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
 ##   .. ..$ K=13: num [1:174, 1:13] 0 0 0 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
-##   .. ..$ K=14: num [1:174, 1:14] 0 0 0 0 0 0 0 0 0 0 ...
+##   .. ..$ K=14: num [1:174, 1:14] 0 0 1 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
 ##   .. ..$ K=15: num [1:174, 1:15] 0 0 0 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
 ##   .. ..$ K=16: num [1:174, 1:16] 0 0 0 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
-##   .. ..$ K=17: num [1:174, 1:17] 0 0 0 0 0 0 0 0 0 0 ...
+##   .. ..$ K=17: num [1:174, 1:17] 0 0 0 0 0 1 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
 ##   .. ..$ K=18: num [1:174, 1:18] 0 0 0 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
-##   .. ..$ K=19: num [1:174, 1:19] 0 0 0 0 0 0 0 0 0 0 ...
+##   .. ..$ K=19: num [1:174, 1:19] 0 0 0 0 0 1 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
-##   .. ..$ K=20: num [1:174, 1:20] 0 0 0 0 0 0 0 0 0 0 ...
+##   .. ..$ K=20: num [1:174, 1:20] 0 0 1 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
 ##   .. ..$ K=21: num [1:174, 1:21] 0 0 0 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
@@ -1468,7 +1515,7 @@ glimpse(coseq_out)</code></pre>
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
 ##   .. ..$ K=24: num [1:174, 1:24] 0 0 0 0 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
-##   .. ..$ K=25: num [1:174, 1:25] 0 0 0 0 0 0 0 0 0 0 ...
+##   .. ..$ K=25: num [1:174, 1:25] 0 0 0 1 0 0 0 0 0 0 ...
 ##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
 ##   ..@ model          : chr &quot;kmeans&quot;
 ##   ..@ transformation : chr &quot;logclr&quot;
@@ -1484,31 +1531,34 @@ glimpse(coseq_out)</code></pre>
 ##   ..@ metadata       :List of 6
 ##   .. ..$ nbCluster     : Named int [1:24] 2 3 4 5 6 7 8 9 10 11 ...
 ##   .. .. ..- attr(*, &quot;names&quot;)= chr [1:24] &quot;K=2&quot; &quot;K=3&quot; &quot;K=4&quot; &quot;K=5&quot; ...
-##   .. ..$ DDSE          : chr &quot;K=2&quot;
+##   .. ..$ DDSE          : chr &quot;K=6&quot;
 ##   .. ..$ Djump         : chr &quot;K=2&quot;
 ##   .. ..$ capushe       :Formal class &#39;Capushe&#39; [package &quot;capushe&quot;] with 5 slots
-##   .. ..$ tot_withinss  : Named num [1:24] 12073498 11019188 10968647 10427978 9073237 ...
+##   .. ..$ tot_withinss  : Named num [1:24] 11527937 11799703 10795903 10130370 8727262 ...
 ##   .. .. ..- attr(*, &quot;names&quot;)= chr [1:24] &quot;K=2&quot; &quot;K=3&quot; &quot;K=4&quot; &quot;K=5&quot; ...
 ##   .. ..$ nbClusterError: NULL</code></pre>
 <ul>
 <li>Per article below, for K-Means, “…the use of untransformed or
 logCLR-transformed data with K-means thus appears to be a more coherent
-choice.” pg. 12 link: <a href="https://arxiv.org/pdf/1704.06150.pdf" class="uri">https://arxiv.org/pdf/1704.06150.pdf</a> #### CLR
-Transformation</li>
+choice.” pg. 12 link: <a href="https://arxiv.org/pdf/1704.06150.pdf" class="uri">https://arxiv.org/pdf/1704.06150.pdf</a></li>
+</ul>
+</div>
+<div id="clr-transformation" class="section level3">
+<h3>CLR Transformation</h3>
+<ul>
 <li>Dr. C advised to use this transformation from the raw counts to the
 centered log ratio (CLR)</li>
 <li>increasing the max iter</li>
 </ul>
-<pre class="r"><code># changed max iter
-# canged transformation type
-coseq(t_rev_bacteria_counts,
+<pre class="r"><code># changed transformation type
+coseq(t_rev_bacteria_counts[,-1],
       K=2:25, 
       transformation=&quot;clr&quot;, # centered log ratio
       norm=&quot;TMM&quot;, # bio-specific setting for these data
       meanFilterCutoff=50, 
       model=&quot;kmeans&quot;,
       nstart=1, 
-      iter.max=50) -&gt; coseq_out_2</code></pre>
+      iter.max=10) -&gt; coseq_out_clr</code></pre>
 <pre><code>## ****************************************
 ## coseq analysis: kmeans approach &amp; clr transformation
 ## K = 2 to 25 
@@ -1538,190 +1588,278 @@ coseq(t_rev_bacteria_counts,
 ## Running K = 23 ...
 ## Running K = 24 ...
 ## Running K = 25 ...</code></pre>
+<ul>
+<li>Quick note: mention that it uses MacQueen K-means, 1967</li>
+<li>Mention for further research that different k-means can give
+different results and can be researched.</li>
+<li>split into 2 species</li>
+<li>use about 5 seeds per species to show reporducible but also
+variability.</li>
+</ul>
+<pre class="r"><code>summary(coseq_out_clr)</code></pre>
+<pre><code>## *************************************************
+## K-means algorithm
+## Transformation: clr
+## *************************************************
+## Clusters fit: 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25
+## Clusters with errors: ---
+## Selected number of clusters via capushe: 4
+## *************************************************
+## Number of clusters = 4
+## *************************************************
+## Cluster sizes:
+## Cluster 1 Cluster 2 Cluster 3 Cluster 4 
+##        14        36        96        28</code></pre>
+<ul>
+<li>With the CLR transformation, the number of clusters stayed the same
+at 2.</li>
+</ul>
 <pre class="r"><code># cluster results
-clusters(coseq_out_2) </code></pre>
-<pre><code>##   [1] 3 2 2 2 4 3 3 2 3 3 5 2 2 2 2 2 2 4 4 4 2 3 3 3 3 3 5 3 5 1 4 5 5 5 2 3 5
-##  [38] 4 4 5 5 5 2 5 4 2 2 1 1 1 4 5 5 1 2 5 4 5 1 5 5 5 4 4 5 1 1 4 1 5 5 5 5 5
-##  [75] 5 5 5 5 5 5 5 5 5 5 1 3 1 5 1 5 5 1 5 5 5 5 1 5 5 5 5 5 5 1 4 5 1 5 5 5 4
-## [112] 5 5 4 5 5 1 1 5 4 5 5 5 4 1 5 5 5 1 5 5 5 5 1 1 5 4 5 5 5 4 5 5 1 5 5 5 1
-## [149] 1 1 5 1 1 1 5 5 5 5 1 1 5 5 5 5 1 5 1 5 5 5 5 5 5 5</code></pre>
+clusters(coseq_out_clr) </code></pre>
+<pre><code>##   [1] 4 1 1 1 4 4 4 1 4 2 3 1 1 1 1 1 1 4 4 4 3 4 4 2 2 2 3 4 3 2 4 3 3 3 1 2 3
+##  [38] 4 4 3 3 3 1 3 4 1 1 2 2 2 4 3 3 2 3 2 4 3 2 3 3 3 4 4 3 2 2 4 2 3 3 3 3 3
+##  [75] 3 3 3 3 3 3 3 3 3 3 3 4 2 3 2 3 3 2 3 3 3 3 2 3 3 3 3 3 3 2 4 3 3 3 3 3 4
+## [112] 3 3 4 3 3 2 3 3 4 3 3 3 4 2 3 3 3 2 3 3 3 3 2 2 3 4 3 3 3 4 3 3 2 3 3 3 2
+## [149] 2 2 3 2 2 2 3 3 3 3 2 2 3 3 3 3 2 3 2 3 3 3 3 3 3 3</code></pre>
 <pre class="r"><code># conditional probabilities of cluster membership
-assay(coseq_out_2) %&gt;% as.data.frame()</code></pre>
-<pre><code>##     Cluster_1 Cluster_2 Cluster_3 Cluster_4 Cluster_5
-## 1           0         0         1         0         0
-## 2           0         1         0         0         0
-## 3           0         1         0         0         0
-## 4           0         1         0         0         0
-## 5           0         0         0         1         0
-## 6           0         0         1         0         0
-## 7           0         0         1         0         0
-## 8           0         1         0         0         0
-## 9           0         0         1         0         0
-## 10          0         0         1         0         0
-## 11          0         0         0         0         1
-## 12          0         1         0         0         0
-## 13          0         1         0         0         0
-## 14          0         1         0         0         0
-## 15          0         1         0         0         0
-## 16          0         1         0         0         0
-## 17          0         1         0         0         0
-## 18          0         0         0         1         0
-## 19          0         0         0         1         0
-## 20          0         0         0         1         0
-## 21          0         1         0         0         0
-## 22          0         0         1         0         0
-## 23          0         0         1         0         0
-## 24          0         0         1         0         0
-## 25          0         0         1         0         0
-## 26          0         0         1         0         0
-## 27          0         0         0         0         1
-## 28          0         0         1         0         0
-## 29          0         0         0         0         1
-## 30          1         0         0         0         0
-## 31          0         0         0         1         0
-## 32          0         0         0         0         1
-## 33          0         0         0         0         1
-## 34          0         0         0         0         1
-## 35          0         1         0         0         0
-## 36          0         0         1         0         0
-## 37          0         0         0         0         1
-## 38          0         0         0         1         0
-## 39          0         0         0         1         0
-## 40          0         0         0         0         1
-## 41          0         0         0         0         1
-## 42          0         0         0         0         1
-## 43          0         1         0         0         0
-## 44          0         0         0         0         1
-## 45          0         0         0         1         0
-## 46          0         1         0         0         0
-## 47          0         1         0         0         0
-## 48          1         0         0         0         0
-## 49          1         0         0         0         0
-## 50          1         0         0         0         0
-## 51          0         0         0         1         0
-## 52          0         0         0         0         1
-## 53          0         0         0         0         1
-## 54          1         0         0         0         0
-## 55          0         1         0         0         0
-## 56          0         0         0         0         1
-## 57          0         0         0         1         0
-## 58          0         0         0         0         1
-## 59          1         0         0         0         0
-## 60          0         0         0         0         1
-## 61          0         0         0         0         1
-## 62          0         0         0         0         1
-## 63          0         0         0         1         0
-## 64          0         0         0         1         0
-## 65          0         0         0         0         1
-## 66          1         0         0         0         0
-## 67          1         0         0         0         0
-## 68          0         0         0         1         0
-## 69          1         0         0         0         0
-## 70          0         0         0         0         1
-## 71          0         0         0         0         1
-## 72          0         0         0         0         1
-## 73          0         0         0         0         1
-## 74          0         0         0         0         1
-## 75          0         0         0         0         1
-## 76          0         0         0         0         1
-## 77          0         0         0         0         1
-## 78          0         0         0         0         1
-## 79          0         0         0         0         1
-## 80          0         0         0         0         1
-## 81          0         0         0         0         1
-## 82          0         0         0         0         1
-## 83          0         0         0         0         1
-## 84          0         0         0         0         1
-## 85          1         0         0         0         0
-## 86          0         0         1         0         0
-## 87          1         0         0         0         0
-## 88          0         0         0         0         1
-## 89          1         0         0         0         0
-## 90          0         0         0         0         1
-## 91          0         0         0         0         1
-## 92          1         0         0         0         0
-## 93          0         0         0         0         1
-## 94          0         0         0         0         1
-## 95          0         0         0         0         1
-## 96          0         0         0         0         1
-## 97          1         0         0         0         0
-## 98          0         0         0         0         1
-## 99          0         0         0         0         1
-## 100         0         0         0         0         1
-## 101         0         0         0         0         1
-## 102         0         0         0         0         1
-## 103         0         0         0         0         1
-## 104         1         0         0         0         0
-## 105         0         0         0         1         0
-## 106         0         0         0         0         1
-## 107         1         0         0         0         0
-## 108         0         0         0         0         1
-## 109         0         0         0         0         1
-## 110         0         0         0         0         1
-## 111         0         0         0         1         0
-## 112         0         0         0         0         1
-## 113         0         0         0         0         1
-## 114         0         0         0         1         0
-## 115         0         0         0         0         1
-## 116         0         0         0         0         1
-## 117         1         0         0         0         0
-## 118         1         0         0         0         0
-## 119         0         0         0         0         1
-## 120         0         0         0         1         0
-## 121         0         0         0         0         1
-## 122         0         0         0         0         1
-## 123         0         0         0         0         1
-## 124         0         0         0         1         0
-## 125         1         0         0         0         0
-## 126         0         0         0         0         1
-## 127         0         0         0         0         1
-## 128         0         0         0         0         1
-## 129         1         0         0         0         0
-## 130         0         0         0         0         1
-## 131         0         0         0         0         1
-## 132         0         0         0         0         1
-## 133         0         0         0         0         1
-## 134         1         0         0         0         0
-## 135         1         0         0         0         0
-## 136         0         0         0         0         1
-## 137         0         0         0         1         0
-## 138         0         0         0         0         1
-## 139         0         0         0         0         1
-## 140         0         0         0         0         1
-## 141         0         0         0         1         0
-## 142         0         0         0         0         1
-## 143         0         0         0         0         1
-## 144         1         0         0         0         0
-## 145         0         0         0         0         1
-## 146         0         0         0         0         1
-## 147         0         0         0         0         1
-## 148         1         0         0         0         0
-## 149         1         0         0         0         0
-## 150         1         0         0         0         0
-## 151         0         0         0         0         1
-## 152         1         0         0         0         0
-## 153         1         0         0         0         0
-## 154         1         0         0         0         0
-## 155         0         0         0         0         1
-## 156         0         0         0         0         1
-## 157         0         0         0         0         1
-## 158         0         0         0         0         1
-## 159         1         0         0         0         0
-## 160         1         0         0         0         0
-## 161         0         0         0         0         1
-## 162         0         0         0         0         1
-## 163         0         0         0         0         1
-## 164         0         0         0         0         1
-## 165         1         0         0         0         0
-## 166         0         0         0         0         1
-## 167         1         0         0         0         0
-## 168         0         0         0         0         1
-## 169         0         0         0         0         1
-## 170         0         0         0         0         1
-## 171         0         0         0         0         1
-## 172         0         0         0         0         1
-## 173         0         0         0         0         1
-## 174         0         0         0         0         1</code></pre>
+assay(coseq_out_clr) %&gt;% as.data.frame()</code></pre>
+<pre><code>##     Cluster_1 Cluster_2 Cluster_3 Cluster_4
+## 1           0         0         0         1
+## 2           1         0         0         0
+## 3           1         0         0         0
+## 4           1         0         0         0
+## 5           0         0         0         1
+## 6           0         0         0         1
+## 7           0         0         0         1
+## 8           1         0         0         0
+## 9           0         0         0         1
+## 10          0         1         0         0
+## 11          0         0         1         0
+## 12          1         0         0         0
+## 13          1         0         0         0
+## 14          1         0         0         0
+## 15          1         0         0         0
+## 16          1         0         0         0
+## 17          1         0         0         0
+## 18          0         0         0         1
+## 19          0         0         0         1
+## 20          0         0         0         1
+## 21          0         0         1         0
+## 22          0         0         0         1
+## 23          0         0         0         1
+## 24          0         1         0         0
+## 25          0         1         0         0
+## 26          0         1         0         0
+## 27          0         0         1         0
+## 28          0         0         0         1
+## 29          0         0         1         0
+## 30          0         1         0         0
+## 31          0         0         0         1
+## 32          0         0         1         0
+## 33          0         0         1         0
+## 34          0         0         1         0
+## 35          1         0         0         0
+## 36          0         1         0         0
+## 37          0         0         1         0
+## 38          0         0         0         1
+## 39          0         0         0         1
+## 40          0         0         1         0
+## 41          0         0         1         0
+## 42          0         0         1         0
+## 43          1         0         0         0
+## 44          0         0         1         0
+## 45          0         0         0         1
+## 46          1         0         0         0
+## 47          1         0         0         0
+## 48          0         1         0         0
+## 49          0         1         0         0
+## 50          0         1         0         0
+## 51          0         0         0         1
+## 52          0         0         1         0
+## 53          0         0         1         0
+## 54          0         1         0         0
+## 55          0         0         1         0
+## 56          0         1         0         0
+## 57          0         0         0         1
+## 58          0         0         1         0
+## 59          0         1         0         0
+## 60          0         0         1         0
+## 61          0         0         1         0
+## 62          0         0         1         0
+## 63          0         0         0         1
+## 64          0         0         0         1
+## 65          0         0         1         0
+## 66          0         1         0         0
+## 67          0         1         0         0
+## 68          0         0         0         1
+## 69          0         1         0         0
+## 70          0         0         1         0
+## 71          0         0         1         0
+## 72          0         0         1         0
+## 73          0         0         1         0
+## 74          0         0         1         0
+## 75          0         0         1         0
+## 76          0         0         1         0
+## 77          0         0         1         0
+## 78          0         0         1         0
+## 79          0         0         1         0
+## 80          0         0         1         0
+## 81          0         0         1         0
+## 82          0         0         1         0
+## 83          0         0         1         0
+## 84          0         0         1         0
+## 85          0         0         1         0
+## 86          0         0         0         1
+## 87          0         1         0         0
+## 88          0         0         1         0
+## 89          0         1         0         0
+## 90          0         0         1         0
+## 91          0         0         1         0
+## 92          0         1         0         0
+## 93          0         0         1         0
+## 94          0         0         1         0
+## 95          0         0         1         0
+## 96          0         0         1         0
+## 97          0         1         0         0
+## 98          0         0         1         0
+## 99          0         0         1         0
+## 100         0         0         1         0
+## 101         0         0         1         0
+## 102         0         0         1         0
+## 103         0         0         1         0
+## 104         0         1         0         0
+## 105         0         0         0         1
+## 106         0         0         1         0
+## 107         0         0         1         0
+## 108         0         0         1         0
+## 109         0         0         1         0
+## 110         0         0         1         0
+## 111         0         0         0         1
+## 112         0         0         1         0
+## 113         0         0         1         0
+## 114         0         0         0         1
+## 115         0         0         1         0
+## 116         0         0         1         0
+## 117         0         1         0         0
+## 118         0         0         1         0
+## 119         0         0         1         0
+## 120         0         0         0         1
+## 121         0         0         1         0
+## 122         0         0         1         0
+## 123         0         0         1         0
+## 124         0         0         0         1
+## 125         0         1         0         0
+## 126         0         0         1         0
+## 127         0         0         1         0
+## 128         0         0         1         0
+## 129         0         1         0         0
+## 130         0         0         1         0
+## 131         0         0         1         0
+## 132         0         0         1         0
+## 133         0         0         1         0
+## 134         0         1         0         0
+## 135         0         1         0         0
+## 136         0         0         1         0
+## 137         0         0         0         1
+## 138         0         0         1         0
+## 139         0         0         1         0
+## 140         0         0         1         0
+## 141         0         0         0         1
+## 142         0         0         1         0
+## 143         0         0         1         0
+## 144         0         1         0         0
+## 145         0         0         1         0
+## 146         0         0         1         0
+## 147         0         0         1         0
+## 148         0         1         0         0
+## 149         0         1         0         0
+## 150         0         1         0         0
+## 151         0         0         1         0
+## 152         0         1         0         0
+## 153         0         1         0         0
+## 154         0         1         0         0
+## 155         0         0         1         0
+## 156         0         0         1         0
+## 157         0         0         1         0
+## 158         0         0         1         0
+## 159         0         1         0         0
+## 160         0         1         0         0
+## 161         0         0         1         0
+## 162         0         0         1         0
+## 163         0         0         1         0
+## 164         0         0         1         0
+## 165         0         1         0         0
+## 166         0         0         1         0
+## 167         0         1         0         0
+## 168         0         0         1         0
+## 169         0         0         1         0
+## 170         0         0         1         0
+## 171         0         0         1         0
+## 172         0         0         1         0
+## 173         0         0         1         0
+## 174         0         0         1         0</code></pre>
+<p>– Changing max iterations to 50 as an experiemnt</p>
+<pre class="r"><code>coseq(t_rev_bacteria_counts[,-1],
+      K=2:25, 
+      transformation=&quot;clr&quot;, # centered log ratio
+      norm=&quot;TMM&quot;, # bio-specific setting for these data
+      meanFilterCutoff=50, 
+      model=&quot;kmeans&quot;,
+      nstart=1, 
+      iter.max=50) -&gt; coseq_out_clr_50</code></pre>
+<pre><code>## ****************************************
+## coseq analysis: kmeans approach &amp; clr transformation
+## K = 2 to 25 
+## Use seed argument in coseq for reproducible results.
+## ****************************************
+## Running K = 2 ...
+## Running K = 3 ...
+## Running K = 4 ...
+## Running K = 5 ...
+## Running K = 6 ...
+## Running K = 7 ...
+## Running K = 8 ...
+## Running K = 9 ...
+## Running K = 10 ...
+## Running K = 11 ...
+## Running K = 12 ...
+## Running K = 13 ...
+## Running K = 14 ...
+## Running K = 15 ...
+## Running K = 16 ...
+## Running K = 17 ...
+## Running K = 18 ...
+## Running K = 19 ...
+## Running K = 20 ...
+## Running K = 21 ...
+## Running K = 22 ...
+## Running K = 23 ...
+## Running K = 24 ...
+## Running K = 25 ...</code></pre>
+<pre class="r"><code>summary(coseq_out_clr_50)</code></pre>
+<pre><code>## *************************************************
+## K-means algorithm
+## Transformation: clr
+## *************************************************
+## Clusters fit: 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25
+## Clusters with errors: ---
+## Selected number of clusters via capushe: 3
+## *************************************************
+## Number of clusters = 3
+## *************************************************
+## Cluster sizes:
+## Cluster 1 Cluster 2 Cluster 3 
+##        43        99        32</code></pre>
+<ul>
+<li>The below default plot() function is not working for k-means</li>
+</ul>
+<pre class="r"><code>class(coseq_out_clr_50)</code></pre>
+<pre><code>## [1] &quot;coseqResults&quot;
+## attr(,&quot;package&quot;)
+## [1] &quot;coseq&quot;</code></pre>
+<pre class="r"><code># plot(coseq_out_clr_50, graphs = &quot;biplots&quot;)$boxplots
+# plot(coseq_out_clr)</code></pre>
+<pre class="r"><code>#coseqGlobalPlots(coseq_out_clr_50, graphs = &quot;probapost_histogram&quot;)</code></pre>
 </div>
 </div>
 

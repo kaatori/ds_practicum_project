@@ -56,13 +56,26 @@ write_csv(t_rev_bacteria_counts, "../output/t_rev_bacteria_counts.csv") # no ASV
 - It may necessary for new users to go through the commands on this page to set up Bioconductor and coseq:
 https://www.bioconductor.org/install/
 - Number of K and max iterations are low to try out method first
+Note:
+### Optional start here, read in in previously transposed data
+```{r}
+# includes ASV name column
+readr::read_csv( "../output/t_rev_bacteria_counts.csv") -> t_rev_bacteria_counts  
+
+```
+
+```{r}
+head(t_rev_bacteria_counts)
+```
+
+### LogCLR with K-Means using ```coseq```
 ```{r}
 library(coseq)
 # try the default method suggested by documentation
-# number of iter and number of lcusters is low to try out method
-coseq(t_rev_bacteria_counts,
-      K=2:25, 
-      transformation="logclr",
+# number of iter and number of clusters is low to try out method
+coseq(t_rev_bacteria_counts[, -1], # take out ASV names in 1st column
+      K=2:25, # experiment with low number
+      transformation="logclr", # recommended from research article
       norm="TMM", 
       meanFilterCutoff=50, 
       model="kmeans",
@@ -74,10 +87,19 @@ coseq(t_rev_bacteria_counts,
 ```{r}
 # summary
 summary(coseq_out)
+```
 
-# cluster results
+
+```{r}
+# cluster results are putting the samples into two primary clusters
 clusters(coseq_out) 
+```
 
+- There are two species of coral in dataset
+- Maybe this is why it found 2 clusters 
+
+
+```{r}
 # conditional probabilities of cluster membership
 assay(coseq_out) %>% as.data.frame()
 ```
@@ -92,40 +114,63 @@ glimpse(coseq_out)
 - Per article below, for K-Means, "...the use of untransformed or logCLR-transformed data with K-means thus appears to be a more coherent choice." pg. 12
 link: https://arxiv.org/pdf/1704.06150.pdf
 
-#### CLR Transformation
+### CLR Transformation
 - Dr. C advised to use this transformation from the raw counts to the centered log ratio (CLR)
 - increasing the max iter
 ```{r}
-# changed max iter
-# canged transformation type
-coseq(t_rev_bacteria_counts,
+# changed transformation type
+coseq(t_rev_bacteria_counts[,-1],
       K=2:25, 
       transformation="clr", # centered log ratio
       norm="TMM", # bio-specific setting for these data
       meanFilterCutoff=50, 
       model="kmeans",
       nstart=1, 
-      iter.max=50) -> coseq_out_2
+      iter.max=10) -> coseq_out_clr
+```
+- Quick note: mention that it uses MacQueen K-means, 1967
+- Mention for further research that different k-means can give different results and can be researched. 
+- split into 2 species
+- use about 5 seeds per species to show reporducible but also variability. 
+```{r}
+summary(coseq_out_clr)
 ```
 
+- With the CLR transformation, the number of clusters stayed the same at 2. 
 
 ```{r}
 # cluster results
-clusters(coseq_out_2) 
+clusters(coseq_out_clr) 
+```
 
+```{r}
 # conditional probabilities of cluster membership
-assay(coseq_out_2) %>% as.data.frame()
+assay(coseq_out_clr) %>% as.data.frame()
+```
+
+
+-- Changing max iterations to 50 as an experiemnt
+```{r}
+coseq(t_rev_bacteria_counts[,-1],
+      K=2:25, 
+      transformation="clr", # centered log ratio
+      norm="TMM", # bio-specific setting for these data
+      meanFilterCutoff=50, 
+      model="kmeans",
+      nstart=1, 
+      iter.max=50) -> coseq_out_clr_50
+
+summary(coseq_out_clr_50)
+```
+
+- The below default plot() function is not working for k-means
+```{r}
+class(coseq_out_clr_50)
+# plot(coseq_out_clr_50, graphs = "biplots")$boxplots
+# plot(coseq_out_clr)
 ```
 
 
 ```{r}
+#coseqGlobalPlots(coseq_out_clr_50, graphs = "probapost_histogram")
 ```
-
-
-```{r}
-```
-
-
-```{r}
-```
-

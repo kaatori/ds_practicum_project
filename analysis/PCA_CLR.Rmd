@@ -83,14 +83,17 @@ importance_df %>%
 ```
 
 
-- How to combine this with K-means?
+## How to combine PCA with K-means? 
 - Source: https://medium.com/@zullinira23/implementation-of-principal-component-analysis-pca-on-k-means-clustering-in-r-794f03ec15f
 ```{r}
+# taking PCs of 1 to 361 from the PCA results
 bac_transform = as.data.frame(-pca_out_clr$x[,1:361])
 
-head(bac_transform)
+head(bac_transform) # PCs 1-361
 
+# experiment with minimizing within sum squares via kmeans from PCs 1-361
 fviz_nbclust(bac_transform, kmeans, method = 'wss', k.max = 400) -> test_out
+# experiment with silhouette metric to try and judge cluster performance
 fviz_nbclust(bac_transform, kmeans, method = 'silhouette', k.max = 400) -> test_out2
 #fviz_nbclust(bac_transform, kmeans, method = 'gap_stat') -> test_out3 ## no convergence
 
@@ -100,7 +103,7 @@ test_out2
 ```
 
 - Average siljouette widths seem low
-- They should be close to 1 if clustering is work well.
+- They should be close to 1 if clustering is working well.
 
 ```{r}
 glimpse(test_out)
