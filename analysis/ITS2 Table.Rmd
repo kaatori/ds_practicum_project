@@ -365,7 +365,8 @@ algae_df %>%
   group_by(sample_id) %>% # 658 down 1 from 659
   ungroup() -> algae_df_no_
   # redoing plot of the 'quick snapshot' with ggpairs to see distributions
-  GGally::ggpairs(columns = c(2, 5, 6,7), 
+  GGally::ggpairs(algae_df_no_, 
+                  columns = c(2, 5, 6,7), 
                   mapping = aes(color = species))
 ```
 
