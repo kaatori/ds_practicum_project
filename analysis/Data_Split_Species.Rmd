@@ -1,0 +1,60 @@
+---
+title: "Data_Split_Species"
+author: "Cassandra Sperow"
+date: "2023-10-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Split Transposed Dataset into Two Datasets: One for Each Species
+
+```{r}
+# read in transposed counts df
+read_csv("../output/t_rev_bacteria_counts.csv") -> t_rev_bacteria_counts
+```
+
+### Select the ASV names column with only the columns that begin with 'S' for the species ......
+- Save to object
+- Note that there are 363 columns for species S
+```{r}
+# sample IDs that begin with 'S' are the species .....
+t_rev_bacteria_counts %>% 
+  select(1, starts_with("S")) -> s_bac
+```
+
+### Select the ASV names column with only the columns that begin with 'P' for the species ......
+- Save to object 
+- Note there are 296 columns for species P
+```{r}
+t_rev_bacteria_counts %>% 
+  select(1, starts_with("P")) -> p_bac
+```
+
+## Data Check Species S
+```{r}
+str(s_bac)
+```
+
+
+
+## Data Check Species P
+
+```{r}
+str(p_bac)
+```
+
+
+
+## Write each to file
+
+```{r}
+write_csv(s_bac, "../output/s_bac.csv")
+
+write_csv(p_bac, "../output/p_bac.csv")
+```
+
+

@@ -1,0 +1,12 @@
+---
+title: "Coseq_Species_S"
+author: "Cassandra Sperow"
+date: "2023-10-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 
