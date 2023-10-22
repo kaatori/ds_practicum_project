@@ -1,0 +1,57 @@
+---
+title: "Coseq_P"
+author: "Cassandra Sperow"
+date: "2023-10-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(coseq)
+```
+
+## Experimental K-Means Clustering with Species P
+- Using the R package 'coseq', perform K-means clustering on bacterial ASV data
+```{r}
+# read in the split dataset with only species P
+read_csv("../output/p_bac.csv") -> p_bac
+```
+
+```{r}
+dim(p_bac)
+```
+
+
+```{r}
+head(p_bac)
+
+p_bac[,-1] -> p_bac_num
+```
+
+## Run coseq() with K-means
+- Uses MacQueen 1967 K-means algorithm 
+- The below is commented out due to taking several hours to run. Results are saved in an RDS file in the output folder. 
+```{r}
+set.seed(42)
+run_kmeans_P <- coseq(p_bac_num, # numeric only
+                    K = 2:100,
+                    transformation = "logclr",
+                    model = "kmeans",
+                    nstart = 100,
+                    iter.max = 1000)
+```
+
+```{r}
+run_kmeans_P
+```
+
+```{r}
+saveRDS(run_kmeans_P, file = "../output/run_kmeans_P.rds")
+```
+
+```{r}
+clusters(run_kmeans_P)
+```
+
+

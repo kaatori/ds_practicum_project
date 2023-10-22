@@ -7,6 +7,102 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(coseq)
 ```
 
-## 
+## Experimental K-Means Clustering with Species S
+- Using the R package 'coseq', perform K-means clustering on bacterial ASV data
+```{r}
+# read in the split dataset with only species S
+read_csv("../output/s_bac.csv") -> s_bac
+```
+
+
+```{r}
+dim(s_bac)
+```
+
+
+```{r}
+head(s_bac)
+
+s_bac[,-1] -> s_bac_num
+```
+
+## Run coseq() with K-means
+- Uses MacQueen 1967 K-means algorithm 
+- The below is commented out due to taking several hours to run. Results are saved in an RDS file in the output folder. 
+```{r}
+# set.seed(42)
+# run_kmeans <- coseq(s_bac_num, # numeric only
+#                     K = 2:100, 
+#                     transformation = "logclr",
+#                     model = "kmeans", 
+#                     nstart = 100, 
+#                     iter.max = 1000)
+```
+
+
+```{r}
+#run_kmeans
+```
+
+- The first run of K-means find the "best" solution of 29 clusters.
+
+```{r}
+# clusters(run_kmeans) %>% 
+#   as.data.frame() %>% 
+#   `colnames<-`("cluster_29") -> clusters_29
+
+```
+
+- The call of the above K-means function with searching through 100 clusters with 100 nstart and 1000 iterations took several hours to run. The start time was around 2:30 PM and the algorithm finished overnight. 
+
+- To be fair to both species, the same will be run for species P one time. Any runs after that need to be paired down for the small scope of this project. 
+
+- Write cluster results to file:
+```{r}
+# inserting an 'S' into the csv file name
+# write_csv(clusters_29, "../output/clusters_29_S.csv")
+```
+
+- Saving the rest of the clustering object results: 
+```{r}
+# coseqResults(run_kmeans, s_bac_num)
+# summary(run_kmeans)
+# glimpse(run_kmeans)
+# 
+# run_kmeans@allResults -> c29_all_results
+# run_kmeans@tcounts -> c29_tcounts
+# run_kmeans@y_profiles -> c29_y_profiles
+# run_kmeans@normFactors -> c29_normFactors
+# run_kmeans@rowRanges -> c29_rowRanges
+# run_kmeans@metadata$tot_withinss -> c29_tot_withinss
+# run_kmeans@metadata$DDSE -> c29_DDSE
+# run_kmeans@metadata$capushe -> c29_capushe
+```
+
+
+
+- using saveRDS()
+```{r}
+# saveRDS(run_kmeans, 
+#         file = "../output/run_kmeans_c29_S.rds")
+```
+
+- Testing Re-Import of Saved K-means Results from RDS File: 
+```{r}
+readRDS("../output/run_kmeans_c29_S.rds") -> test_import_RDS
+```
+
+```{r}
+test_import_RDS
+```
+
+```{r}
+test_import_RDS@metadata$tot_withinss %>% 
+  as.data.frame() %>% 
+  `colnames<-`("WSS")
+```
+
