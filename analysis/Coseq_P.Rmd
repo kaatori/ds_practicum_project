@@ -46,6 +46,7 @@ run_kmeans_P <- coseq(p_bac_num, # numeric only
 run_kmeans_P
 ```
 
+## Save Model Results in RDS file:
 ```{r}
 saveRDS(run_kmeans_P, file = "../output/run_kmeans_P.rds")
 ```
@@ -54,4 +55,65 @@ saveRDS(run_kmeans_P, file = "../output/run_kmeans_P.rds")
 clusters(run_kmeans_P)
 ```
 
+
+
+
+
+```{r}
+run_kmeans_P@metadata$tot_withinss %>% 
+  as.data.frame() %>% 
+  `colnames<-`("TOTWSS") %>% 
+  mutate(K = 2:100) -> K_tot_withinss_P
+```
+
+### Plot Total Within Sums of Squares and K Clusters
+```{r}
+ggplot(K_tot_withinss_P, 
+       aes(x = K, y = TOTWSS)) +
+  geom_point() +
+  ggtitle("Total Within Cluster Sum of Squares", 
+          "Species P") +
+  theme_bw() +
+  xlab("K = Number of Clusters") + 
+  ylab("Total Within Cluster SS") -> plot_totwss_p
+```
+
+
+```{r}
+plot_totwss_p
+```
+
+## Inertia
+```{r}
+clusterInertia(profiles = tcounts(run_kmeans_P), 
+               clusters = clusters(run_kmeans_P)) -> inertia_P
+
+length(inertia_P)
+```
+
+### Plot of the Within Cluster Inertia for the "Best" Clustering Model of K=25 for Species P
+```{r}
+# base plot
+base::plot( 1:length(inertia_P), inertia_P, 
+            main = "Within Cluster Inertia for K = 25")
+```
+
+## GGPlot Cluster Inertia for 'Best' K = 25s
+```{r}
+# better plot
+tibble(
+  "Cluster_Num" = 1:25, 
+  "WC_Inertia" = inertia_P
+) %>% 
+  ggplot(aes(x = Cluster_Num, 
+             y = WC_Inertia)) +
+  geom_point() +
+  theme_bw() +
+  ggtitle("Inertia Per Cluster", "'Best' Model, K = 25 Clusters for Species P") -> plot_k25_inertias_P
+
+
+
+plot_k25_inertias_P
+
+```
 
