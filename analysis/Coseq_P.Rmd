@@ -153,6 +153,12 @@ saveRDS(run_kmeans_P2, "../output/run_kmeans_P2.rds")
 - Modifying only the seed with same decreased K = 2:50 to reduce runtime but keep iterations high and nstart high. 
 ```{r, cache=TRUE}
 set.seed(105)
+run_kmeans_P3 <- coseq(p_bac_num, 
+                       K= 2:50, 
+                       transformation = "logclr",
+                       model = "kmeans",
+                       nstart = 100, 
+                       iter.max = 1000)
 
 ```
 

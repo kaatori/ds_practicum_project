@@ -185,9 +185,11 @@ run_kmeans_3 <- coseq(s_bac_num,
 
 
 ```{r}
+run_kmeans_3
 ```
 
 
 ```{r}
+saveRDS(run_kmeans_3, "../output/run_kmeans_3.rds")
 ```
 
