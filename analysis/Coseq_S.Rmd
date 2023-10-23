@@ -116,6 +116,12 @@ tibble(
 
 plot_k29_inertias_S
 
+
+ggsave("../plots/plot_k29_inertias_S.png", 
+       plot_k29_inertias_S, 
+       device = "png", 
+       width = 10, 
+       height = 7)
 ```
 
 
@@ -140,5 +146,48 @@ test_import_RDS
 test_import_RDS@metadata$tot_withinss %>% 
   as.data.frame() %>% 
   `colnames<-`("WSS")
+```
+
+## Additional Seeds Results
+- Modifying the 'K' parameter to decrease run time
+- Modifying the seed to pick different centers
+```{r}
+set.seed(23)
+run_kmeans_2 <- coseq(s_bac_num,
+                      K = 2:50,
+                      transformation = "logclr",
+                      model = "kmeans",
+                      nstart = 100, 
+                      iter.max = 1000)
+
+
+```
+
+```{r}
+run_kmeans_2
+```
+
+```{r}
+saveRDS(run_kmeans_2, "../output/run_kmeans_2.rds")
+```
+
+### Seed
+- Modifying only the seed with same decreased K = 2:50 to reduce runtime but keep iterations high and nstart high. 
+```{r, cache=TRUE}
+set.seed(105)
+run_kmeans_3 <- coseq(s_bac_num,
+                      K = 2:50,
+                      transformation = "logclr",
+                      model = "kmeans",
+                      nstart = 100, 
+                      iter.max = 1000)
+```
+
+
+```{r}
+```
+
+
+```{r}
 ```
 

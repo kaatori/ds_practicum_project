@@ -115,5 +115,62 @@ tibble(
 
 plot_k25_inertias_P
 
+ggsave("../plots/plot_k25_inertias_P.png", 
+       plot_k25_inertias_P, 
+       device = "png", 
+       width = 10, 
+       height = 7)
+
 ```
+
+
+## Additional Seeds
+- setting cache = TRUE to be able to knit without re-running
+- Modifying the 'K' parameter to decrease run time
+- Modifying the seed to pick different centers
+```{r, cache=TRUE}
+set.seed(23)
+run_kmeans_P2 <- coseq(p_bac_num, 
+                       K= 2:50, 
+                       transformation = "logclr",
+                       model = "kmeans",
+                       nstart = 100, 
+                       iter.max = 1000)
+```
+
+
+```{r}
+run_kmeans_P2
+```
+
+
+```{r}
+saveRDS(run_kmeans_P2, "../output/run_kmeans_P2.rds")
+```
+
+
+### Seed 
+- Modifying only the seed with same decreased K = 2:50 to reduce runtime but keep iterations high and nstart high. 
+```{r, cache=TRUE}
+set.seed(105)
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+
+
+
+
+
+
+
+
 
