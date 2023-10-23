@@ -32,31 +32,38 @@ p_bac[,-1] -> p_bac_num
 ## Run coseq() with K-means
 - Uses MacQueen 1967 K-means algorithm 
 - The below is commented out due to taking several hours to run. Results are saved in an RDS file in the output folder. 
+- For additional seeds to compare, the cache = TRUE for code chunks that take a very long time to run. 
 ```{r}
-set.seed(42)
-run_kmeans_P <- coseq(p_bac_num, # numeric only
-                    K = 2:100,
-                    transformation = "logclr",
-                    model = "kmeans",
-                    nstart = 100,
-                    iter.max = 1000)
+# set.seed(42)
+# run_kmeans_P <- coseq(p_bac_num, # numeric only
+#                     K = 2:100,
+#                     transformation = "logclr",
+#                     model = "kmeans",
+#                     nstart = 100,
+#                     iter.max = 1000)
 ```
 
+- To be able to knit without re-running the above several hours, the below is commented out.
 ```{r}
-run_kmeans_P
+#run_kmeans_P
 ```
-
+The above object returns: 
+"An object of class coseqResults
+ 5889 features by 296 samples. 
+ Models fit: K = 2 ... 100
+ Chosen clustering model: K = 25"
+ 
+ 
+ 
 ## Save Model Results in RDS file:
 ```{r}
-saveRDS(run_kmeans_P, file = "../output/run_kmeans_P.rds")
+#saveRDS(run_kmeans_P, file = "../output/run_kmeans_P.rds")
 ```
 
+## Re-import to be able to plot results:
 ```{r}
-clusters(run_kmeans_P)
+readRDS("../output/run_kmeans_P.rds") -> run_kmeans_P
 ```
-
-
-
 
 
 ```{r}
@@ -64,6 +71,8 @@ run_kmeans_P@metadata$tot_withinss %>%
   as.data.frame() %>% 
   `colnames<-`("TOTWSS") %>% 
   mutate(K = 2:100) -> K_tot_withinss_P
+
+K_tot_withinss_P
 ```
 
 ### Plot Total Within Sums of Squares and K Clusters
@@ -124,10 +133,12 @@ ggsave("../plots/plot_k25_inertias_P.png",
 ```
 
 
-## Additional Seeds
-- setting cache = TRUE to be able to knit without re-running
+## Seed Experiments
+- Setting cache = TRUE to be able to knit without re-running
 - Modifying the 'K' parameter to decrease run time
-- Modifying the seed to pick different centers
+- Modifying the seed to pick different centers with all other hyperparameters the same
+
+### Seed 23
 ```{r, cache=TRUE}
 set.seed(23)
 run_kmeans_P2 <- coseq(p_bac_num, 
@@ -149,7 +160,7 @@ saveRDS(run_kmeans_P2, "../output/run_kmeans_P2.rds")
 ```
 
 
-### Seed 
+### Seed 105
 - Modifying only the seed with same decreased K = 2:50 to reduce runtime but keep iterations high and nstart high. 
 ```{r, cache=TRUE}
 set.seed(105)
@@ -164,18 +175,40 @@ run_kmeans_P3 <- coseq(p_bac_num,
 
 
 ```{r}
+run_kmeans_P3
 ```
 
 
 ```{r}
+saveRDS(run_kmeans_P3, "../output/run_kmeans_P3.rds")
+```
+
+### Seed 12
+```{r, cache=TRUE}
+set.seed(12)
+run_kmeans_P4 <- coseq(p_bac_num, 
+                       K = 2:50, 
+                       transformation = "logclr", 
+                       model = "kmeans", 
+                       nstart = 100,
+                       iter.max = 1000)
+
 ```
 
 
 
+```{r}
+run_kmeans_P4
+```
+
+
+```{r}
+saveRDS(run_kmeans_P4, "../output/run_kmeans_P4.rds")
+```
 
 
 
-
+### Compare Results from 3 Seed Experiments for Species P
 
 
 

@@ -33,6 +33,7 @@ s_bac[,-1] -> s_bac_num
 ## Run coseq() with K-means
 - Uses MacQueen 1967 K-means algorithm 
 - The below is commented out due to taking several hours to run. Results are saved in an RDS file in the output folder. 
+- The other runs of coseq() have the cache = TRUE in the code chunk; however, these each still take at least an hour to run. 
 ```{r}
 # set.seed(42)
 # run_kmeans <- coseq(s_bac_num, # numeric only
@@ -129,13 +130,13 @@ ggsave("../plots/plot_k29_inertias_S.png",
 
 ## Saving Model Results in RDS file:
 ```{r}
-# saveRDS(run_kmeans, 
-#         file = "../output/run_kmeans_c29_S.rds")
+saveRDS(run_kmeans,
+        file = "../output/run_kmeans.rds")
 ```
 
 - Testing Re-Import of Saved K-means Results from RDS File: 
 ```{r}
-readRDS("../output/run_kmeans_c29_S.rds") -> test_import_RDS
+readRDS("../output/run_kmeans.rds") -> test_import_RDS
 ```
 
 ```{r}
@@ -148,10 +149,13 @@ test_import_RDS@metadata$tot_withinss %>%
   `colnames<-`("WSS")
 ```
 
-## Additional Seeds Results
+## Seed Experiments
+- Setting cache = TRUE to be able to knit without re-running
 - Modifying the 'K' parameter to decrease run time
-- Modifying the seed to pick different centers
-```{r}
+- Modifying the seed to pick different centers with all other hyperparameters the same
+
+### Seed 23
+```{r, cache=TRUE}
 set.seed(23)
 run_kmeans_2 <- coseq(s_bac_num,
                       K = 2:50,
@@ -171,7 +175,7 @@ run_kmeans_2
 saveRDS(run_kmeans_2, "../output/run_kmeans_2.rds")
 ```
 
-### Seed
+### Seed 105
 - Modifying only the seed with same decreased K = 2:50 to reduce runtime but keep iterations high and nstart high. 
 ```{r, cache=TRUE}
 set.seed(105)
@@ -191,5 +195,18 @@ run_kmeans_3
 
 ```{r}
 saveRDS(run_kmeans_3, "../output/run_kmeans_3.rds")
+```
+
+### Seed 12 
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
 ```
 
