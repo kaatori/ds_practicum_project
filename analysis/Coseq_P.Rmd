@@ -209,7 +209,60 @@ saveRDS(run_kmeans_P4, "../output/run_kmeans_P4.rds")
 
 
 ### Compare Results from 3 Seed Experiments for Species P
+- Compare the 3 seed experiments of 'run_kmeans_P2', 'run_kmeans_P3', and 'run_kmeans_P4' as these were all the same but for the seed:
+```{r}
+clusters(run_kmeans_P2) -> runP2clusters
+clusters(run_kmeans_P3) -> runP3clusters
+clusters(run_kmeans_P4) -> runP4clusters
+```
 
 
+```{r}
+length(runP2clusters)
+length(runP3clusters)
+length(runP4clusters)
+
+
+```
+
+
+#### Obtain Cluster Assignments per Run
+```{r}
+tibble(
+  "runP2clusters" = runP2clusters, 
+  "runP3clusters" = runP3clusters, 
+  "runP4clusters" = runP4clusters
+) -> runP234cluster_assigns
+```
+
+
+```{r}
+# check dimensions before appending columns with cluster assignments
+p_bac %>% dim
+```
+
+#### Create Cluster Assignment Data Frame for Species P
+```{r}
+bind_cols(
+  p_bac[,1], 
+  runP234cluster_assigns
+)
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
 
 

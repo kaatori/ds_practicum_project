@@ -218,5 +218,44 @@ saveRDS(run_kmeans_4, "../output/run_kmeans_4.rds")
 ```
 
 
+### Compare Results from 3 Seed Experiments for Species S
+- Compare the 3 seed experiments of 'run_kmeans_2', 'run_kmeans_3', and 'run_kmeans_4' as these were all the same but for the seed:
+```{r}
+clusters(run_kmeans_2) -> run2cluster
+clusters(run_kmeans_3) -> run3cluster
+clusters(run_kmeans_4) -> run4cluster
+```
 
+
+```{r}
+length(run2cluster)
+length(run3cluster)
+length(run4cluster)
+```
+
+#### Obtain Cluster Assignments per Run
+```{r}
+tibble(
+  "run2cluster" = run2cluster,
+  "run3cluster" = run3cluster,
+  "run4cluster" = run4cluster
+) -> run234cluster_assigns_S
+```
+
+
+```{r}
+s_bac %>% dim
+```
+
+### Create Cluster Assignment Data Frame for Species S
+```{r}
+bind_cols(
+  s_bac[,1],
+  run234cluster_assigns_S
+)
+```
+
+
+```{r}
+```
 
