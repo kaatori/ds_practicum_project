@@ -229,15 +229,15 @@ length(runP4clusters)
 #### Obtain Cluster Assignments per Run
 ```{r}
 tibble(
-  "runP2clusters" = runP2clusters, 
-  "runP3clusters" = runP3clusters, 
-  "runP4clusters" = runP4clusters
+  "seed23_run2" = runP2clusters, 
+  "seed105_run3" = runP3clusters, 
+  "seed12_run4" = runP4clusters
 ) -> runP234cluster_assigns
 ```
 
 
 ```{r}
-# check dimensions before appending columns with cluster assignments
+# check dimensions before appending ASV names with cluster assignments
 p_bac %>% dim
 ```
 
@@ -246,11 +246,15 @@ p_bac %>% dim
 bind_cols(
   p_bac[,1], 
   runP234cluster_assigns
-)
+) -> species_P_cluster_assignments
+
+head(species_P_cluster_assignments)
 ```
 
 
 ```{r}
+write_csv(species_P_cluster_assignments, 
+          "../output/species_P_cluster_assignments.csv")
 ```
 
 

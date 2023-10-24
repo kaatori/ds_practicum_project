@@ -236,9 +236,9 @@ length(run4cluster)
 #### Obtain Cluster Assignments per Run
 ```{r}
 tibble(
-  "run2cluster" = run2cluster,
-  "run3cluster" = run3cluster,
-  "run4cluster" = run4cluster
+  "seed23_run2" = run2cluster,
+  "seed105_run3" = run3cluster,
+  "seed12_run4" = run4cluster
 ) -> run234cluster_assigns_S
 ```
 
@@ -252,10 +252,14 @@ s_bac %>% dim
 bind_cols(
   s_bac[,1],
   run234cluster_assigns_S
-)
+) -> species_S_cluster_assignments
+
+head(species_S_cluster_assignments)
 ```
 
 
 ```{r}
+write_csv(species_S_cluster_assignments, 
+          "../output/species_S_cluster_assignments.csv")
 ```
 
