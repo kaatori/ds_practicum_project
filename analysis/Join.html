@@ -357,13 +357,13 @@ display: none;
 </div>
 
 
-<div id="join-bacteria-table-with-algal-type-clade" class="section level1">
-<h1>Join Bacteria Table with Algal Type (Clade)</h1>
+<div id="join-bacteria-table-with-algal-clade" class="section level1">
+<h1>Join Bacteria Table with Algal Clade</h1>
 <ul>
 <li><p>How can we explain which bacteria are associated with each
 clade?</p></li>
-<li><p>Can we predict algal type (clade) based on bacteria present in
-the given dataset of samples?</p></li>
+<li><p>Can we learn more about the relationship between algal clade
+based on bacteria present in the given dataset of samples?</p></li>
 <li><p>In order to address these questions, joining the clode per sample
 ID with the bacteria ASV table is necessary.</p></li>
 </ul>
@@ -409,7 +409,7 @@ samples:</li>
 <ul>
 <li>The algae_df.csv file was made from the original ITS2 table and
 includes information from the metadata of region, majority sequence,
-majority sequence type (clade) and other variables:</li>
+majority sequence type, clade, and other variables:</li>
 </ul>
 <pre class="r"><code>read_csv(&quot;../output/algae_df.csv&quot;) -&gt; algae_df</code></pre>
 <pre><code>## Rows: 57992 Columns: 8
@@ -436,12 +436,14 @@ majority sequence type (clade) and other variables:</li>
 ## 5 84566 A     A1       PDOG-R1-1          0 P       DOG    R1   
 ## 6 85585 A     A1/A1c   PDOG-R1-1          0 P       DOG    R1</code></pre>
 <ul>
-<li>Examine the algal type(s) for one sample:</li>
+<li>Examine the algal counts for two samples:</li>
 </ul>
 <pre class="r"><code>algae_df %&gt;% 
   filter(sample_id == &quot;PDOG-R1-1&quot;) %&gt;% 
-  arrange(-its2_count) </code></pre>
+  arrange(-its2_count) %&gt;% 
+  group_by(Clade)</code></pre>
 <pre><code>## # A tibble: 88 × 8
+## # Groups:   Clade [5]
 ##     ITS2 Clade Majority sample_id its2_count species region reef 
 ##    &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;
 ##  1 84568 A     A1/A1c   PDOG-R1-1      21483 P       DOG    R1   
@@ -455,10 +457,32 @@ majority sequence type (clade) and other variables:</li>
 ##  9 84603 A     A1       PDOG-R1-1          0 P       DOG    R1   
 ## 10 84604 A     A1/A1cz  PDOG-R1-1          0 P       DOG    R1   
 ## # ℹ 78 more rows</code></pre>
+<pre class="r"><code>algae_df %&gt;% 
+  filter(sample_id == &quot;SWAJ-R3-21&quot;) %&gt;% 
+  arrange(-its2_count, Clade) %&gt;% 
+  group_by(Clade)</code></pre>
+<pre><code>## # A tibble: 88 × 8
+## # Groups:   Clade [5]
+##     ITS2 Clade Majority sample_id  its2_count species region reef 
+##    &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;    &lt;chr&gt;           &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;
+##  1 85599 A     A1       SWAJ-R3-21      20894 S       WAJ    R3   
+##  2 85489 C     C15/C3z  SWAJ-R3-21        267 S       WAJ    R3   
+##  3 84736 B     B1g      SWAJ-R3-21        205 S       WAJ    R3   
+##  4 85268 D     D1       SWAJ-R3-21        158 S       WAJ    R3   
+##  5 84864 C     C3k      SWAJ-R3-21         88 S       WAJ    R3   
+##  6 85651 C     C93a     SWAJ-R3-21         63 S       WAJ    R3   
+##  7 85586 A     A1       SWAJ-R3-21          0 S       WAJ    R3   
+##  8 85581 A     A1       SWAJ-R3-21          0 S       WAJ    R3   
+##  9 84568 A     A1/A1c   SWAJ-R3-21          0 S       WAJ    R3   
+## 10 85591 A     A1       SWAJ-R3-21          0 S       WAJ    R3   
+## # ℹ 78 more rows</code></pre>
 <ul>
 <li><p>From the above, sample PDOG-R1-1 has the majority clade of A
 where the ITS2 abundance count is 21,483, and the rest of the ITS2
 counts are 0.</p></li>
+<li><p>For sample SWAJ-R3-21, the max ITS2 count is 20894, which is
+clade A. There are ITS2 counts for clade B, C, D, but we need the max
+clade per sample.</p></li>
 <li><p>Need to obtain this assignment per sample before
 joining.</p></li>
 <li><p>Group by sample id and clade, and then take the max its2
@@ -470,6 +494,23 @@ SYAN-R4-22 has ITS2 counts for clade A and C whereas most samples have
 only one clade. For this sample, take the clade with the higher ITS2
 count, which in this case is clade A.</p></li>
 </ul>
+<pre class="r"><code>algae_df %&gt;% 
+  group_by(sample_id, Clade)</code></pre>
+<pre><code>## # A tibble: 57,992 × 8
+## # Groups:   sample_id, Clade [3,295]
+##     ITS2 Clade Majority sample_id its2_count species region reef 
+##    &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;
+##  1 85586 A     A1       PDOG-R1-1          0 P       DOG    R1   
+##  2 85581 A     A1       PDOG-R1-1          0 P       DOG    R1   
+##  3 84568 A     A1/A1c   PDOG-R1-1      21483 P       DOG    R1   
+##  4 85591 A     A1       PDOG-R1-1          0 P       DOG    R1   
+##  5 84566 A     A1       PDOG-R1-1          0 P       DOG    R1   
+##  6 85585 A     A1/A1c   PDOG-R1-1          0 P       DOG    R1   
+##  7 85596 A     A1       PDOG-R1-1          0 P       DOG    R1   
+##  8 84552 A     A1       PDOG-R1-1          0 P       DOG    R1   
+##  9 84603 A     A1       PDOG-R1-1          0 P       DOG    R1   
+## 10 84604 A     A1/A1cz  PDOG-R1-1          0 P       DOG    R1   
+## # ℹ 57,982 more rows</code></pre>
 <pre class="r"><code>algae_df %&gt;% 
   group_by(sample_id, Clade) %&gt;% # yes, 659 samples
   # create new column of the majority clade&#39;s its2 counts (the max since rest are 0)
@@ -493,18 +534,21 @@ count, which in this case is clade A.</p></li>
   mutate(max_clade_count = max(its2_count)) %&gt;% 
   # ungroup data frame
   ungroup() %&gt;%  # 57,992  rows
-  # filter out the extra rows per sample where the its2 count is 0
+  # filter out where the its2 count is 0
   filter(its2_count &gt; 0) %&gt;%  # 778 rows - therefore, some samples have two clades
   # arrange by the max_clade_count in order to slice per group
   arrange(-max_clade_count) %&gt;% 
   # in order to slice the max clade count per group, need to group by sample id
   group_by(sample_id) %&gt;%  # 658 samples, so somewhere, one of them has a 0 max count
   # based on arrangement above, this will grab max clade count row per sample if more than one. 
-  slice(1) %&gt;% 
+  dplyr::slice(1) %&gt;% 
   # don&#39;t need this columns any longer as it&#39;s now the same as its2 count
   select(-max_clade_count) %&gt;% 
   # reorder 
-  select(sample_id, Clade, ITS2, its2_count, Majority, species, region, reef)-&gt; algae_clade_df
+  select(sample_id, Clade, 
+         ITS2, its2_count, 
+         Majority, species, 
+         region, reef) -&gt; algae_clade_df
 
 
 algae_clade_df %&gt;% 
@@ -573,17 +617,6 @@ head(coral_data)</code></pre>
 <li>Write to file</li>
 </ul>
 <pre class="r"><code>write_csv(coral_data, &quot;../output/coral_data.csv&quot;)</code></pre>
-</div>
-<div id="data-quality-checks" class="section level3">
-<h3>Data Quality Checks</h3>
-<ul>
-<li>From working above, which sample didn’t have any ITS2 counts that
-made it go down from 659 to 658?</li>
-</ul>
-<pre class="r"><code>coral_data$sample_id %&gt;% length()</code></pre>
-<pre><code>## [1] 658</code></pre>
-<pre class="r"><code>unique(algae_df$sample_id) %&gt;% length()</code></pre>
-<pre><code>## [1] 659</code></pre>
 </div>
 </div>
 

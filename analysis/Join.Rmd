@@ -10,11 +10,11 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
-# Join Bacteria Table with Algal Type (Clade)
+# Join Bacteria Table with Algal Clade
 
 - How can we explain which bacteria are associated with each clade? 
 
-- Can we predict algal type (clade) based on bacteria present in the given dataset of samples?
+- Can we learn more about the relationship between algal clade based on bacteria present in the given dataset of samples?
 
 - In order to address these questions, joining the clode per sample ID with the bacteria ASV table is necessary.
 
@@ -33,7 +33,7 @@ head(rev_bacteria)
 
 ### Read in Algae Table (ITS2s)
 
-- The algae_df.csv file was made from the original ITS2 table and includes information from the metadata of region, majority sequence, majority sequence type (clade) and other variables:
+- The algae_df.csv file was made from the original ITS2 table and includes information from the metadata of region, majority sequence, majority sequence type, clade, and other variables:
 
 ```{r}
 read_csv("../output/algae_df.csv") -> algae_df
@@ -45,19 +45,35 @@ dim(algae_df)
 head(algae_df)
 ```
 
-- Examine the algal type(s) for one sample: 
+- Examine the algal counts for two samples: 
 ```{r}
 algae_df %>% 
   filter(sample_id == "PDOG-R1-1") %>% 
-  arrange(-its2_count) 
+  arrange(-its2_count) %>% 
+  group_by(Clade)
+
+
+algae_df %>% 
+  filter(sample_id == "SWAJ-R3-21") %>% 
+  arrange(-its2_count, Clade) %>% 
+  group_by(Clade)
 ```
 - From the above, sample PDOG-R1-1 has the majority clade of A where the ITS2 abundance count is 21,483, and the rest of the ITS2 counts are 0. 
+
+- For sample SWAJ-R3-21, the max ITS2 count is 20894, which is clade A. There are ITS2 counts for clade B, C, D, but we need the max clade per sample. 
 
 - Need to obtain this assignment per sample before joining. 
 
 - Group by sample id and clade, and then take the max its2 count. 
+
 - Some samples have ITS2 counts for more than one clade.
+
 - For the scope of this project, and since we need to join data from the ASV table, take only the majority clade. For ex, sample SYAN-R4-22 has ITS2 counts for clade A and C whereas most samples have only one clade. For this sample, take the clade with the higher ITS2 count, which in this case is clade A.
+ 
+```{r}
+algae_df %>% 
+  group_by(sample_id, Clade)
+```
  
 
 ```{r}
@@ -80,18 +96,21 @@ algae_df %>%
   mutate(max_clade_count = max(its2_count)) %>% 
   # ungroup data frame
   ungroup() %>%  # 57,992  rows
-  # filter out the extra rows per sample where the its2 count is 0
+  # filter out where the its2 count is 0
   filter(its2_count > 0) %>%  # 778 rows - therefore, some samples have two clades
   # arrange by the max_clade_count in order to slice per group
   arrange(-max_clade_count) %>% 
   # in order to slice the max clade count per group, need to group by sample id
   group_by(sample_id) %>%  # 658 samples, so somewhere, one of them has a 0 max count
   # based on arrangement above, this will grab max clade count row per sample if more than one. 
-  slice(1) %>% 
+  dplyr::slice(1) %>% 
   # don't need this columns any longer as it's now the same as its2 count
   select(-max_clade_count) %>% 
   # reorder 
-  select(sample_id, Clade, ITS2, its2_count, Majority, species, region, reef)-> algae_clade_df
+  select(sample_id, Clade, 
+         ITS2, its2_count, 
+         Majority, species, 
+         region, reef) -> algae_clade_df
 
 
 algae_clade_df %>% 
@@ -136,54 +155,6 @@ write_csv(coral_data, "../output/coral_data.csv")
 ```
 
 
-### Data Quality Checks
-
-- From working above, which sample didn't have any ITS2 counts that made it go down from 659 to 658?
-
-```{r}
-
-coral_data$sample_id %>% length()
-
-unique(algae_df$sample_id) %>% length()
-```
 
 
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
 

@@ -1,0 +1,49 @@
+---
+title: "Project Proposal"
+author: "Cassandra Sperow"
+date: "2023-10-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Classification of Algal Clade using Bacterial ASV Abundance
+
+What is the relationship between ASVs and algal clade?
+Which ASVs present the most impact in defining algal clade?
+
+### Project Category: Application
+
+### Team Details: Self
+
+Introduction/Motivation: make it for convincing people of funding the project. 
+
+Research into the specific characteristics of coral microbiomes is relatively nascent as most microbiome research focuses on human or agricultural microbiomes. Also relatively new within approximately the past decade is the application of machine learning techniques to explore or predict healthy vs. diseased individuals based on bacteria found in the patient. This project aims to explore the application of machine learning classification methods to explore the relationship between a coral sample's bacterial attributes and its algal type, also referred to as clade. 
+Bacteria could be present in all clades or one. 
+Non-exlusive
+
+
+Methodology: 
+
+Intended Experiments: 
+-	Outline how do I plan to evaluate the ML model? It works or it doesn’t work. And the reasons for if it does or does not. 
+-	How am I going to evaluate the model? 
+o	Metrics
+
+1. ROC Plot(s) 
+2. Classification Matrix 
+3. P-value(s) of predictor variables
+4. Accuracy Rate
+5. Interpretability of which predictor variables contribute the most to the classification result
+
+
+Prior Research: 
+
+Uddin, S., Khan, A., Hossain, M. E., & Moni, M. A. (2019). Comparing different supervised machine learning algorithms for disease prediction. BMC medical informatics and decision making, 19(1), 1-16.
+[https://doi.org/10.1186/s12911-019-1004-8](https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-019-1004-8)
+
+References: 
+
+
