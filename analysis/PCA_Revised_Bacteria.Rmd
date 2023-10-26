@@ -1,0 +1,230 @@
+---
+title: "PCA_Revised_Bacteria_27K"
+author: "Cassandra Sperow"
+date: "2023-10-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stats)
+setwd("/Users/kasan/AU My Drive/001__DATA_793/R_dir_Corals_")
+suppressMessages(library(tidyverse))
+```
+
+# Principal Components Analysis for Revised 27K Bacteria
+
+- **Note:** This section uses the original abundance counts per ASV. 
+- The revised analysis uses proportions per ASV by sample row instead. Please refer to the file 'PCA_Revised_Bacteria_Proportions.Rmd' for that analysis instead of this one. 
+
+- *Goal*: Find the principal components of the ASV matrix of counts. The number of principal components that explains most of the underlying data may be used as a number "k" clusters for K-Means later. 
+
+- *Method*: Principal Components Analysis (PCA) which is an unsupervised machine learning technique to reduce the dimensionality of the data set. At the present moment, the ASVs are considered to be in p=5,890-dimensional space. PCA seeks to reduce this number of dimensions while still retaining the maximum amount of information in the ASVs.
+
+## Read in Revised Data Frame
+- Revised bacteria data have 5,890 ASV columns vs. the original 33K. 
+- See "Bacteria ASV Table EDA.Rmd" for details
+```{r}
+# read in revised bacteria df with only 5,890 ASV columns (not 33K)
+read_csv("../output/rev_bacteria.csv") -> rev_bacteria
+```
+
+## Test PCA for Scaled Data
+
+```{r}
+# taking out sample ID column
+# scaling the data
+stats::prcomp(rev_bacteria[,-1], scale = T) -> pca_out
+```
+
+```{r}
+pca_out %>% glimpse() # list of 5
+
+pca_out$center %>% as.data.frame()
+
+pca_out$x %>% as.data.frame() # 659 x 659
+
+pca_out$rotation %>% as.data.frame()
+```
+
+```{r}
+summary(pca_out) -> pca_out_summary
+
+glimpse(pca_out_summary) # list of 6
+```
+- From the summary of the PCA results, the output is hard to read because there are 659 samples. 
+
+- Need to review the 'importance' part of the summary results, but it is not in an easily-readable format; therefore need to adjust.
+
+- Create a separate df for the 'importance' aspect of the summary of the PCA results to review the standard deviations, proportions of variance explained, and the cumulative proportions because we need to see how many components explain at least 80 % of the variability in the X matrix of bacteria:
+
+- Dr. C also asked about 90 % 
+```{r}
+# from above, the importance results have the following names per PC 1-659
+names_pca_out <- c("Standard deviation" ,"Proportion of Variance", "Cumulative Proportion")
+
+# using the names above to make the same 
+bind_cols(
+pca_out_name = names_pca_out, 
+pca_out_summary$importance
+) -> importance_df
+```
+
+- How many PCs explain at least 80 % ? 90 % ?
+```{r}
+importance_df %>% 
+  # pivoting data drame so that cumulatives are in column
+  t() %>%  as.data.frame() %>% 
+  # moving up top row as column header
+  janitor::row_to_names(1) %>% ######## snapshot here for presentation
+  # filtering cumulative proportion column for greater > = 80 %
+  filter(`Cumulative Proportion` >= 0.8)
+
+
+importance_df %>% 
+  # pivoting data drame so that cumulatives are in column
+  t() %>%  as.data.frame() %>% 
+  # moving up top row as column header
+  janitor::row_to_names(1) %>% ######## snapshot here for presentation
+  # filtering cumulative proportion column for greater > = 80 %
+  filter(`Cumulative Proportion` >= 0.9)
+
+```
+- About 239 principal components explain 80 % of cumulative variance in the X matrix of only the 5K bacteria, but the increments here are so small per bacteria by glancing at the individual proportion of variance. 
+
+- The number of principal components may be used as the number of ```k``` clusters to look for in K-Means clustering that will be done in separate .Rmd file. 
+
+
+```{r}
+screeplot(pca_out, main = "Screeplot of PCA Results")
+plot(pca_out)
+```
+
+```{r}
+biplot(pca_out, 
+      # scale = 0, 
+      # cex = c(1, 1.3)
+      # expand = 10,
+      # choices = 3:4
+      # xlim = c(-0.002, 0.002), ylim = c(-0.001, 0.001)
+       )
+```
+
+
+```{r}
+factoextra::fviz_pca_biplot(pca_out, repel = T, 
+                            alpha.var = 0.5,
+                            select.var = list(contrib = 5), # top 5 contributors are blue arrows in the plot amongst others
+                          #  xlim = c(-100, 300), 
+                          #  ylim = c(),
+                          title = "PCA Biplot\n Top 5 Contributors indicated by blue arrows",
+                          xlabs=rep("*", nrow(rev_bacteria))
+)
+```
+- Obtain simpler plot of first 2 components using indexing from 'x' in pca_out object:
+```{r}
+# pch argument is for making points not regular viz from pca object
+plot(pca_out$x[,1:2], pch=1)
+```
+
+```{r}
+library(plotly)
+library(ggfortify)
+```
+
+```{r}
+class(pca_out)
+pca_out %>% autoplot(loadings = T, 
+                     loadings.label = T, 
+                     loadings.label.size = 3, 
+                     repel = T, 
+                     
+                     main = "PCA Results Plot", 
+)
+```
+
+Documentation: https://search.r-project.org/CRAN/refmans/factoextra/html/fviz_pca.html
+
+- Graph of Indivdiuals:
+```{r}
+library(factoextra)
+fviz_pca_ind(pca_out, 
+             select.ind = list(contrib = 200),
+             col.ind = "#00AFBB",
+             addEllipses=TRUE, 
+             #ellipse.level=0.95, 
+             #palette = "Dark2",
+            # palette = c("#999999", "#E69F00", "#56B4E9"),
+             repel = TRUE, 
+            #label = "none",
+            title = "Top 200 Contributing PCs")
+```
+
+- Graph of Variables: 
+```{r}
+fviz_pca_var(pca_out, 
+             #col.var = "steelblue", 
+             col.var = "contrib", 
+             gradient.cols = c("red", "blue", "green"), 
+            # repel = T, 
+            label = "none",
+             title = "All Variables in PCA")
+```
+- Since there are so many that have the same standard deviation and individual proportional, it may be useful to see the distribution of these, especially since the screeplot only gives first 10:
+```{r}
+# importance_df %>% 
+#   t() %>% as.data.frame() %>% 
+#   janitor::row_to_names(1) %>% 
+#   ggplot(aes(x = as.numeric(`Proportion of Variance`), y = 1:659)) +
+#   geom_point()
+# 
+# importance_df %>% 
+#   t() %>% as.data.frame() %>% 
+#   janitor::row_to_names(1) %>% 
+#   ggplot(aes(x = as.numeric(`Cumulative Proportion`), y = 1:659)) +
+#   geom_point()
+
+importance_df %>% 
+  t() %>% as.data.frame() %>% 
+  janitor::row_to_names(1) %>% 
+  ggplot(aes(x = as.numeric(`Cumulative Proportion`) , y =  as.numeric(`Proportion of Variance`))) +
+  geom_point() +
+  ggtitle("PCA Results: Proportion of Variance", "This is a better screeplot showing all PCs on counts-based `rev_bacteria` Scaled") +
+  xlab("Cumulative Proportion") +
+  ylab("Proportion of Variance per Principal Component") +
+  theme_bw()
+```
+Interpretation: This acts as a more informative screeplot that shows how the proportion of variance exponentially decreases. 
+
+- Compare same plot 
+```{r}
+fviz_pca_var(pca_out, 
+             col.var = "contrib", 
+             alpha.var = .5,
+             #repel = TRUE,
+             title = "Count-based, Scaled Bacteria PCA Results \nTop 100 Contributors",
+             select.var = list(contrib = 100))
+```
+
+- Dim 1
+```{r}
+fviz_contrib(pca_out, 
+             choice = "var", 
+             axes = 1,
+             
+             top = 20) %>% 
+  ggpubr::ggpar(., ylim = c(0, 0.6))
+```
+
+- Dim 2
+```{r}
+fviz_contrib(pca_out, 
+             choice = "var", 
+             axes = 2,
+             top = 20)
+```
+
+
+```{r}
+```
+
