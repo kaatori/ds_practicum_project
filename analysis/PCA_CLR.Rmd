@@ -6,11 +6,13 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 suppressMessages(library(tidyverse))
 ```
 
-## 
+## Read in Transformed Data for Principal Components Analysis
+- Centered log ratio = CLR
+- CLR data transformation recommended by client
 ```{r}
 read_csv("../output/clr_bac_df.csv") -> clr_bac_df
 ```
@@ -19,18 +21,20 @@ read_csv("../output/clr_bac_df.csv") -> clr_bac_df
 ```{r}
 head(clr_bac_df) # not scaled, only clr transformation
 ```
-
+## Run PCA - Both Species
+- Scale = TRUE
 ```{r}
 stats::prcomp(clr_bac_df, scale. = T) -> pca_out_clr
 
 ```
 
+### Screeplot with base::plot()
 
 ```{r}
 screeplot(pca_out_clr)
 ```
 
-
+### Factoextra PCA CLR Visualization - Both Species
 ```{r}
 library(factoextra)
 fviz_pca_var(pca_out_clr, 
@@ -48,7 +52,7 @@ summary(pca_out_clr)$importance %>% as_tibble() -> importance_matrix
 
 ```
 
-
+##### Bind Columns of Names of PCA Outputs to View Percentages
 ```{r}
 bind_cols(
   name = c("StndDev", "IndivProp", "CumProp"), 
@@ -56,7 +60,7 @@ bind_cols(
 ) -> importance_df
 ```
 
-
+#### Screeplot vis Ggplot
 ```{r}
 importance_df %>% 
   t() %>% 
@@ -71,9 +75,122 @@ importance_df %>%
 ```
 
 
-- How many PCs contribute at least 80 % ? 361
+### How many PCs contribute at least 80 % ? 361
 ```{r}
 importance_df %>% 
+  # pivoting data drame so that cumulatives are in column
+  t() %>%  as.data.frame() %>% 
+  # moving up top row as column header
+  janitor::row_to_names(1) %>% ######## snapshot here for presentation
+  # filtering cumulative proportion column for greater > = 80 %
+  filter(CumProp >= 0.8 & CumProp <= 0.78) 
+
+```
+
+
+
+# Split by Species for PCA
+
+
+## Species P - Import Data
+
+```{r}
+# add back in the sample IDs to separate by species
+# read in original data frame from creating the CLR transformation
+read_csv("../output/rev_bacteria.csv") -> rev_bacteria
+
+# section out the sample ID column and save
+rev_bacteria[,1] -> sample_id_column
+
+# re-combine with clr-transformed data and save
+bind_cols(
+  sample_id_column,
+  clr_bac_df
+) -> clr_bac_df_samples
+
+```
+
+#### Split for Species P
+```{r}
+clr_bac_df_samples %>% 
+  # the sample IDs that have a capital S at the beginning of the string are species S
+  filter(str_detect(sample_id, "^P")) -> species_P_CLR_DF
+```
+
+- PCA can't rescale a constant 0 column
+- Check the columns that sum to 0:  1,110 columns sum to 0 and would not allow PCA to work for species P
+```{r}
+# PCA can't rescale a constant 0 column
+# Check transformed data for columns that are all 0 values
+species_P_CLR_DF[,-1] %>% 
+  map(., ~sum(.)) %>% 
+  as.data.frame() %>% 
+  pivot_longer(cols = everything()) %>% 
+  filter(value == 0) -> zero_columns
+
+```
+
+- Remove columns identified above for successful run of PCA
+```{r}
+species_P_CLR_DF %>% 
+  select(-(zero_columns$name)) -> pca_data_species_P
+```
+
+
+### Species P - PCA
+
+
+```{r}
+stats::prcomp(pca_data_species_P[,-1], scale. = T) -> pca_out_P
+```
+
+
+```{r}
+base::plot(pca_out_P)
+```
+
+
+```{r}
+library(factoextra)
+fviz_pca_var(pca_out_P, 
+             #col.var = "steelblue", 
+             col.var = "contrib", 
+             gradient.cols = c("red", "blue", "green"), 
+             #repel = T, 
+            label = "none",
+             title = "ASV Variables in Species P")
+```
+
+#### Which of these explain at least 80 % of the variability in species P?
+```{r}
+summary(pca_out_P)$importance %>% as_tibble() -> importance_matrix_P
+```
+
+
+```{r}
+bind_cols(
+  name = c("StndDev", "IndivProp", "CumProp"), 
+  importance_matrix_P
+) -> species_p_importance
+```
+
+
+```{r}
+species_p_importance %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  janitor::row_to_names(1) %>% 
+  ggplot(aes(x = as.numeric(CumProp) , y =  as.numeric(IndivProp))) +
+  geom_point() +
+  ggtitle("Species P - PCA Results: Proportion of Variance") +
+  xlab("Cumulative Proportion") +
+  ylab("Proportion of Variance per Principal Component") +
+  theme_bw()
+```
+
+##### How many PCs contribute to at least 80 % ? 166
+```{r}
+species_p_importance %>% 
   # pivoting data drame so that cumulatives are in column
   t() %>%  as.data.frame() %>% 
   # moving up top row as column header
@@ -83,46 +200,123 @@ importance_df %>%
 ```
 
 
-## How to combine PCA with K-means? 
-- Source: https://medium.com/@zullinira23/implementation-of-principal-component-analysis-pca-on-k-means-clustering-in-r-794f03ec15f
 ```{r}
-# taking PCs of 1 to 361 from the PCA results
-bac_transform = as.data.frame(-pca_out_clr$x[,1:361])
-
-head(bac_transform) # PCs 1-361
-
-# experiment with minimizing within sum squares via kmeans from PCs 1-361
-fviz_nbclust(bac_transform, kmeans, method = 'wss', k.max = 400) -> test_out
-# experiment with silhouette metric to try and judge cluster performance
-fviz_nbclust(bac_transform, kmeans, method = 'silhouette', k.max = 400) -> test_out2
-#fviz_nbclust(bac_transform, kmeans, method = 'gap_stat') -> test_out3 ## no convergence
+fviz_pca_ind(pca_out_P, 
+             geom.var = c("point", "text"),
+            # repel = T,
+             title = "Species P - ASV Individuals")
 
 
-test_out
-test_out2
+fviz_pca(pca_out_P, 
+        # col.var = "contrib", 
+         #select.ind = list(contrib = 10)
+         select.var = list(contrib = 2),
+         #repel = T
+        #label = "none"
+         )
 ```
 
-- Average siljouette widths seem low
-- They should be close to 1 if clustering is working well.
-
+### Get PCA Variable Names
 ```{r}
-glimpse(test_out)
+get_pca_var(pca_out_P)
 ```
 
 
 ```{r}
-summary(test_out)
+get_pca_var(pca_out_P)$contrib %>% 
+  as.data.frame() %>% 
+  arrange(-Dim.1) -> species_P_pca
+```
+
+```{r}
+write_csv(species_P_pca, "../output/species_P_pca_ranks.csv")
 ```
 
 
 ```{r}
+fviz_contrib(pca_out_P, choice = "var", axes = 1, top = 20, 
+             title = "Species P Top 20 Contributing ASVs in Dimension 1", 
+             ggtheme = theme_minimal()) -> top_20_pca_P
+
+top_20_pca_P
+```
+
+```{r}
+ggsave("../plots/top_20_pca_P.png", top_20_pca_P, width = 14, bg = "#ffffffff")
+```
+
+# Species S
+## Species S - Import Data
+
+```{r}
+# section out the observations for species S and save
+clr_bac_df_samples %>% 
+  filter(str_detect(sample_id, "^S")) -> clr_data_S
+
+```
+
+
+- PCA can't rescale a constant 0 column
+- Check the columns that sum to 0 for species S:
+```{r}
+# PCA can't rescale a constant 0 column
+# Check transformed data for columns that are all 0 values
+clr_data_S[,-1] %>% 
+  map(., ~sum(.)) %>% 
+  as.data.frame() %>% 
+  pivot_longer(cols = everything()) %>% 
+  filter(value == 0) -> zero_columns_S
+
+## take the columns that sum to 0 out before running PCA for species S
+clr_data_S %>% 
+  select(-(zero_columns_S$name)) -> pca_data_species_S
+
+```
+
+
+## Run PCA for Species S
+```{r}
+stats::prcomp(pca_data_species_S[,-1], # take out sample_id column
+              scale. = T) -> pca_out_S
+```
+
+```{r}
+fviz_pca_var(pca_out_S, 
+             #col.var = "steelblue", 
+             col.var = "contrib", 
+             gradient.cols = c("red", "blue", "green"), 
+             #repel = T, 
+            label = "none",
+             title = "ASV Variables in Species S")
+```
+- This is quite different from Species P where the highest contributing only went into one quadrant. See above. 
+
+```{r}
+get_pca_var(pca_out_S)
 ```
 
 
 ```{r}
+get_pca_var(pca_out_S)$contrib %>%
+  as.data.frame() %>% 
+  arrange(-Dim.1) -> species_S_pca_ranks
+```
+
+```{r}
+write_csv(species_S_pca_ranks, "../output/species_S_pca_ranks.csv")
 ```
 
 
 ```{r}
+fviz_contrib(pca_out_S, choice = "var", axes = 1, top = 20, 
+             title = "Species S Top 20 Contributing ASVs in Dimension 1", 
+             ggtheme = theme_minimal())  -> top_20_pca_S
+
+top_20_pca_S
+```
+
+
+```{r}
+ggsave("../plots/top_20_pca_S.png", top_20_pca_S, width = 14, bg='#ffffff')
 ```
 
