@@ -11,7 +11,7 @@
 
 <meta name="author" content="Cassandra Sperow" />
 
-<meta name="date" content="2023-10-18" />
+<meta name="date" content="2023-10-30" />
 
 <title>Join</title>
 
@@ -352,13 +352,16 @@ display: none;
 
 <h1 class="title toc-ignore">Join</h1>
 <h4 class="author">Cassandra Sperow</h4>
-<h4 class="date">2023-10-18</h4>
+<h4 class="date">2023-10-30</h4>
 
 </div>
 
 
 <div id="join-bacteria-table-with-algal-clade" class="section level1">
 <h1>Join Bacteria Table with Algal Clade</h1>
+<p><strong>Revised 10-30-2023 with section for prioritizing clade C.
+Please scroll down to section titled ‘Clade C Prioritization’
+</strong></p>
 <ul>
 <li><p>How can we explain which bacteria are associated with each
 clade?</p></li>
@@ -630,6 +633,98 @@ head(coral_data)</code></pre>
 <li>Write to file</li>
 </ul>
 <pre class="r"><code>write_csv(coral_data, &quot;../output/coral_data.csv&quot;)</code></pre>
+</div>
+</div>
+<div id="clade-c-prioritization" class="section level1">
+<h1>Clade C Prioritization</h1>
+<p>As of 10-30-2023, client advised to focus on clade C (not clade A
+which was the dominant clade).</p>
+<p>The below data wrangling obtains the clade C information per sample
+if the sample had any sequencing data for clade C.</p>
+<p>Considerations:</p>
+<ul>
+<li>Filter for Clade C info and examine how many observations there are,
+especially when splitting by species because each species has a
+different genetic profile that was previously obtained in:</li>
+</ul>
+<p>Buitrago-López, Cárdenas, et al. (2023). Disparate population and
+holobiont structure of pocilloporid corals across the Red Sea gradient
+demonstrate species-specific evolutionary trajectories. Molecular
+Ecology. 2023;32:2151–2173. DOI: 10.1111/mec.16871</p>
+<ul>
+<li>Species matters. The statistical and machine learning modeling will
+be later split by species because they each have different
+characteristics.</li>
+</ul>
+<div id="filtering-for-clade-c-and-taking-out-0-values-for-its2-count" class="section level2">
+<h2>Filtering for Clade C and taking out 0 values for ITS2 count</h2>
+<div id="clade-c-has-139-rows-with-non-zero-values.-this-is-extremely-small-for-machine-learning.-this-will-be-balanced-with-non-c-clade-observations" class="section level4">
+<h4>Clade C has 139 rows with non-zero values. This is extremely small
+for machine learning. This will be balanced with non-C clade
+observations</h4>
+<pre class="r"><code># use algae data frame wrangled from &#39;ITS2 Table.Rmd&#39;
+algae_df %&gt;% 
+  # prioritize clade C observations for client
+  filter(Clade == &quot;C&quot;) %&gt;% 
+  # remove 0 counts
+  filter(its2_count != 0) %&gt;%  # 139 rows 
+  # group to see how many sample ID have clade C sequencing
+  group_by(sample_id) # 111 sample IDs have sequencing data for clade C</code></pre>
+<pre><code>## # A tibble: 139 × 8
+## # Groups:   sample_id [111]
+##     ITS2 Clade Majority sample_id  its2_count species region reef 
+##    &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;    &lt;chr&gt;           &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;
+##  1 85490 C     C3z      PDOG-R2-22       1019 P       DOG    R2   
+##  2 85054 C     C15      PDOG-R2-22         28 P       DOG    R2   
+##  3 84880 C     C72      PFAR-R3-24        274 P       FAR    R3   
+##  4 85490 C     C3z      PKAU-R1-1        2583 P       KAU    R1   
+##  5 85439 C     C1/C1h   PMAQ-R1-12       2102 P       MAQ    R1   
+##  6 85083 C     C3       PMAQ-R1-15        136 P       MAQ    R1   
+##  7 85439 C     C1/C1h   PMAQ-R1-15       7680 P       MAQ    R1   
+##  8 85083 C     C3       PMAQ-R1-27        524 P       MAQ    R1   
+##  9 84835 C     C1       PMAQ-R1-27      12227 P       MAQ    R1   
+## 10 85083 C     C3       PMAQ-R1-30         99 P       MAQ    R1   
+## # ℹ 129 more rows</code></pre>
+<ul>
+<li>Some samples have more than one clade C sequence. Ex: PDOG-R2-22 has
+genetic sequencing for C3z and C1S. These will be treated as separate
+observations because each alphanumeric sequence is a different algae
+type within the wider clade category.</li>
+</ul>
+</div>
+</div>
+<div id="redo-join" class="section level2">
+<h2>Redo Join</h2>
+<pre class="r"><code>algae_df %&gt;% 
+  # remove 0 counts
+  filter(its2_count != 0) %&gt;% 
+  left_join(rev_bacteria, by = join_by(sample_id)) %&gt;% 
+  # clarify that ITS2 should be a type for anyone reading it in later
+  rename(ITS2_type = ITS2) -&gt; rev_coral_join</code></pre>
+</div>
+<div id="check-a-few-samples-with-original-tables" class="section level2">
+<h2>Check a few samples with original tables</h2>
+<p>“PYAN-R3-1” - Verified “PDOG-R1-7” - Verified “SFAR-R1-14” -
+Verified</p>
+<pre class="r"><code>rev_coral_join %&gt;% 
+ # filter(sample_id == &quot;PYAN-R3-1&quot;) %&gt;% # yes both algae and bacteria counts joined correctly from original tables
+ # filter(sample_id == &quot;PDOG-R1-7&quot;) # yes, this one also checks out with original tables
+  filter(sample_id == &quot;SFAR-R1-14&quot;) # yes</code></pre>
+<pre><code>## # A tibble: 1 × 5,897
+##   ITS2_type Clade Majority sample_id  its2_count species region reef  ASV0001
+##       &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;    &lt;chr&gt;           &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;   &lt;dbl&gt;
+## 1     85591 A     A1       SFAR-R1-14      15167 S       FAR    R1          0
+## # ℹ 5,888 more variables: ASV0002 &lt;dbl&gt;, ASV0003 &lt;dbl&gt;, ASV0004 &lt;dbl&gt;,
+## #   ASV0005 &lt;dbl&gt;, ASV0006 &lt;dbl&gt;, ASV0007 &lt;dbl&gt;, ASV0008 &lt;dbl&gt;, ASV0009 &lt;dbl&gt;,
+## #   ASV0010 &lt;dbl&gt;, ASV0011 &lt;dbl&gt;, ASV0012 &lt;dbl&gt;, ASV0013 &lt;dbl&gt;, ASV0014 &lt;dbl&gt;,
+## #   ASV0015 &lt;dbl&gt;, ASV0016 &lt;dbl&gt;, ASV0017 &lt;dbl&gt;, ASV0018 &lt;dbl&gt;, ASV0019 &lt;dbl&gt;,
+## #   ASV0020 &lt;dbl&gt;, ASV0022 &lt;dbl&gt;, ASV0023 &lt;dbl&gt;, ASV0024 &lt;dbl&gt;, ASV0025 &lt;dbl&gt;,
+## #   ASV0027 &lt;dbl&gt;, ASV0030 &lt;dbl&gt;, ASV0031 &lt;dbl&gt;, ASV0032 &lt;dbl&gt;, ASV0033 &lt;dbl&gt;,
+## #   ASV0034 &lt;dbl&gt;, ASV0035 &lt;dbl&gt;, ASV0036 &lt;dbl&gt;, ASV0037 &lt;dbl&gt;, …</code></pre>
+</div>
+<div id="write-new-data-frame-to-csv-for-other-analysis-files" class="section level2">
+<h2>Write new data frame to csv for other analysis files</h2>
+<pre class="r"><code>write_csv(rev_coral_join, &quot;../output/rev_coral_join.csv&quot;)</code></pre>
 </div>
 </div>
 

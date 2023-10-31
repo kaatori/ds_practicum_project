@@ -33,11 +33,11 @@ As corals are known to harbor and support at least a quarter of the ocean's mari
 
 Van Oppen and Blackall (2019) showed that heat as an environmental stress on corals was not associated with bleaching when the coral microbiome was identified to be stable. This means that when certain bacteria strains are present in the coral's algae during elevated temperature exposure, the bacteria act as regulators of the coral's ability to maintain its feeding cycle and stay healthy. A variety of different interactions occur between a coral's algae and bacteria, creating a symbiotic relationship that regulates many complex processes within coral bodies (Morris et al 2019). As ocean temperatures are expected to rise due to climate change, heat and other environmental factors are expected to increase the risk of coral bleaching and the destruction of reefs (Cressey 2016). 
 
-This project aims to use similarly applied machine learning methods to explore the relationship between a coral sample's bacterial attributes and its algal clade. The goal is to understand which bacteria present the most impact in defining algal clade A. Despite not having the data available as labeled in terms of healthy vs. bleached coral, describing the relationship and possible predictor impacts of bacteria provide insight into the characteristics of which bacteria may most associate with algae clade A within the coral nutrient processing system. Understanding the underlying structure of how bacteria are associated with algal clade is one step in a multi-step process of ultimately deciphering how corals behave or cope when exposed to certain stressors.  
+This project aims to use similarly applied machine learning methods to explore the relationship between a coral sample's bacterial attributes and algal clade C with the goal of  understanding which bacteria present the most impact in defining algal clade C. Despite not having the data available as labeled in terms of healthy vs. bleached coral, describing the relationship and possible predictors provide insight into the descriptive characteristics of which bacteria may most associate with algae clade C. Understanding the underlying structure of how bacteria are associated with algal clade is one step in a multi-step process of ultimately deciphering how corals behave or cope when exposed to certain stressors.  
 
 ### Methodology: 
 
-The proposed methodology is to use binary classification technique(s), specifically logistic classification, to model the coral sample algae clade as predicted by bacteria abundance counts. Other possible predictors include region, reef, and species. The response variable is a one-dimensional vector of algal clade as either clade A or C, which will be converted into a binary outcome of "1" or "0", respectively. Each coral sample was previously profiled for its algal clade and bacterial abundance counts in previous work by Buitrago-López et al (2023). 
+The proposed methodology is to use binary classification technique(s), specifically logistic classification, to model the coral sample algae clade as predicted by bacteria abundance counts. Other possible predictors include region, reef, and species. The response variable is a one-dimensional vector of algal clade C as a binary outcome of "1", while non-C observations will be labeled as "0". Each coral sample was previously profiled for its algal clade and bacterial abundance counts in previous work by Buitrago-López et al (2023). 
 
 Counts-based data from bacterial and algae genetic sequencing is known to be linearly dependent and naturally violates many statistical assumptions of normality. Data transformations are often used in the modeling process to account for the compositional nature of sequencing data. The recommended data transformation for these data is the log-centered log ratio, outlined in Godichon-Baggioni et al (2018). 
 
@@ -46,19 +46,19 @@ The dataset is expected to be compositional and high-dimensional; therefore lass
 
 ### Intended Experiments: 
 
-Observations of coral samples may be split into two species: species "P" is *Pocillopora verrucosa*; species "S" is *Stylophora pistillata*. It is possible that splitting the data by species will help in decreasing any noise from either species; however, in the entire dataset (n = 658), there are 52 observations of clade C vs. 606 observations of clade A. Clade C observations are approximately 8 %. As the number of observations for clade C decreases even more when the data are split by species, it may be useful to keep the data together in order to have more observations for clade C in the training process. If this is the case, the column for species will indicate either a "P" or an "S" as a possible predictor. These low numbers indicate that there may not be enough information about clade C for the model to perform well. 
+Observations of coral samples may be split into two species: species "P" is *Pocillopora verrucosa*; species "S" is *Stylophora pistillata*. It is possible that splitting the data by species will help in decreasing any noise from either species; however, in the entire dataset of non-zero algae sequencing counts of ITS2 algae gene types (n = 778), there are n = 139 observations of clade C  (some samples have different clade C gene types and will be treated as separate observations). The remaining observations of non-clade C  observations (n = 639) will be randomly sampled to balance the number of observations for each class label for binary classification. 
 
-For the scope of this project and given the number of observations, it will be necessary to subset the 100, 500, or 1000 most abundant bacterial strains out of 5,889. This will assist is dimensionality reduction, as well as help the overall interpretability and computational expense of the modeling process. During the genetic sequencing process in Buitrago-López et al (2023), the bacteria are ranked in terms of the most abundant across all samples; therefore, subsetting by index of bacteria is a reliable method, keeping in mind whether or not the data are also subset by species or not. 
+For the scope of this project and given the number of observations, it may be necessary to subset 100, 500, or 1000 most abundant bacterial strains out of 5,889. This will assist is dimensionality reduction, as well as help the overall interpretability and computational expense of the modeling process. During the genetic sequencing process in Buitrago-López et al (2023), the bacteria are ranked in terms of the most abundant across all samples; however, as clade C is the second-most abundant clade in the dataset, Principal Components Analysis (PCA) will be used to create uncorrelated variables for modeling before subsetting any columns. 
 
 Several diagnostic and evaluation metrics for the logistic classification model will include:
 
 1. ROC Plot(s) 
-2. Classification Matrix 
+2. Confusion Matrix 
 3. Accuracy Rate
 4. P-value(s) of possible predictor bacteria or other variables
 5. Interpretability of which predictor variables contribute the most to the classification result
 
-If time allows, Support Vector Machines, Random Forests, or Gaussian Mixture Models may also be explored. Gaussian Mixture Models would allow for these data to be modeled using only the clade A observations in order to detect any anomalies, i.e., those belonging to clade C. 
+If time allows, Random Forests, or Gaussian Mixture Models may also be explored. 
 
 
 ### Prior Research: 
