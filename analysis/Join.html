@@ -481,20 +481,25 @@ majority sequence type, clade, and other variables:</li>
 where the ITS2 abundance count is 21,483, and the rest of the ITS2
 counts are 0.</p></li>
 <li><p>For sample SWAJ-R3-21, the max ITS2 count is 20894, which is
-clade A. There are ITS2 counts for clade B, C, D, but we need the max
-clade per sample.</p></li>
-<li><p>Need to obtain this assignment per sample before
-joining.</p></li>
-<li><p>Group by sample id and clade, and then take the max its2
-count.</p></li>
-<li><p>Some samples have ITS2 counts for more than one clade.</p></li>
-<li><p>For the scope of this project, and since we need to join data
-from the ASV table, take only the majority clade. For ex, sample
-SYAN-R4-22 has ITS2 counts for clade A and C whereas most samples have
-only one clade. For this sample, take the clade with the higher ITS2
-count, which in this case is clade A.</p></li>
+clade A. There are ITS2 counts for clade B, C, D. Some samples have ITS2
+counts for more than one clade.</p></li>
 </ul>
-<pre class="r"><code>algae_df %&gt;% 
+<p><strong>Revision from client: Focus on clade C because the coral
+researching community knows less about clade C than A.</strong></p>
+<ul>
+<li><p>Need to obtain the sampling data for clade C to see how many
+observations there are for clade C before modeling.</p></li>
+<li><p>Group by sample id and clade.</p></li>
+<li><p>For the scope of this project, focus on modeling clade C. For ex,
+sample SYAN-R4-22 has ITS2 counts for clade A and C whereas most samples
+have only one clade. For this sample, take the clade C
+information.</p></li>
+<li><p>After seeing how many observations have clade C sequencing data,
+can balance with observations from other clades for binary
+classifciation modeling.</p></li>
+</ul>
+<pre class="r"><code># reviewing groups of sample ID and Clade
+algae_df %&gt;% 
   group_by(sample_id, Clade)</code></pre>
 <pre><code>## # A tibble: 57,992 × 8
 ## # Groups:   sample_id, Clade [3,295]
@@ -511,9 +516,14 @@ count, which in this case is clade A.</p></li>
 ##  9 84603 A     A1       PDOG-R1-1          0 P       DOG    R1   
 ## 10 84604 A     A1/A1cz  PDOG-R1-1          0 P       DOG    R1   
 ## # ℹ 57,982 more rows</code></pre>
+<ul>
+<li>From the above, there are many, many rows with 0 values for ITS2
+counts because not every algae type was found in every sample.</li>
+</ul>
 <pre class="r"><code>algae_df %&gt;% 
   group_by(sample_id, Clade) %&gt;% # yes, 659 samples
   # create new column of the majority clade&#39;s its2 counts (the max since rest are 0)
+  # this column is no longer needed since lcient advised to focus on clade C ---Please see revised data wrangling for clade C below
   mutate(max_clade_count = max(its2_count)) %&gt;% 
   # ungroup data frame
   ungroup() %&gt;% 
@@ -528,6 +538,9 @@ count, which in this case is clade A.</p></li>
 <ul>
 <li>Filtering out the secondary clades as mentioned above:</li>
 </ul>
+<p><strong>Revision 10-30-2023: Client advises to focus on clade C;
+therefore, please see below section on wrangling data to prioritize
+clade C not whatever the dominant clade is.</strong></p>
 <pre class="r"><code>algae_df %&gt;% 
   group_by(sample_id, Clade) %&gt;% # yes, 659 samples
   # create new column of the majority clade&#39;s its2 counts (the max since rest are 0)

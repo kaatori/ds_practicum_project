@@ -1,7 +1,7 @@
 ---
 title: "Join"
 author: "Cassandra Sperow"
-date: "2023-10-18"
+date: "2023-10-30"
 output: html_document
 ---
 
@@ -11,6 +11,8 @@ library(tidyverse)
 ```
 
 # Join Bacteria Table with Algal Clade
+
+**Revised 10-30-2023 with section for prioritizing clade C. Please scroll down to section titled 'Clade C Prioritization' **
 
 - How can we explain which bacteria are associated with each clade? 
 
@@ -60,26 +62,31 @@ algae_df %>%
 ```
 - From the above, sample PDOG-R1-1 has the majority clade of A where the ITS2 abundance count is 21,483, and the rest of the ITS2 counts are 0. 
 
-- For sample SWAJ-R3-21, the max ITS2 count is 20894, which is clade A. There are ITS2 counts for clade B, C, D, but we need the max clade per sample. 
+- For sample SWAJ-R3-21, the max ITS2 count is 20894, which is clade A. There are ITS2 counts for clade B, C, D. Some samples have ITS2 counts for more than one clade.
 
-- Need to obtain this assignment per sample before joining. 
 
-- Group by sample id and clade, and then take the max its2 count. 
+**Revision from client: Focus on clade C because the coral researching community knows less about clade C than A.** 
 
-- Some samples have ITS2 counts for more than one clade.
+- Need to obtain the sampling data for clade C to see how many observations there are for clade C before modeling. 
 
-- For the scope of this project, and since we need to join data from the ASV table, take only the majority clade. For ex, sample SYAN-R4-22 has ITS2 counts for clade A and C whereas most samples have only one clade. For this sample, take the clade with the higher ITS2 count, which in this case is clade A.
+- Group by sample id and clade. 
+
+- For the scope of this project, focus on modeling clade C. For ex, sample SYAN-R4-22 has ITS2 counts for clade A and C whereas most samples have only one clade. For this sample, take the clade C information. 
+
+- After seeing how many observations have clade C sequencing data, can balance with observations from other clades for binary classifciation modeling. 
  
 ```{r}
+# reviewing groups of sample ID and Clade
 algae_df %>% 
   group_by(sample_id, Clade)
 ```
- 
+ - From the above, there are many, many rows with 0 values for ITS2 counts because not every algae type was found in every sample.
 
 ```{r}
 algae_df %>% 
   group_by(sample_id, Clade) %>% # yes, 659 samples
   # create new column of the majority clade's its2 counts (the max since rest are 0)
+  # this column is no longer needed since lcient advised to focus on clade C ---Please see revised data wrangling for clade C below
   mutate(max_clade_count = max(its2_count)) %>% 
   # ungroup data frame
   ungroup() %>% 
@@ -89,6 +96,9 @@ algae_df %>%
 ```
 
 - Filtering out the secondary clades as mentioned above: 
+
+**Revision 10-30-2023: Client advises to focus on clade C; therefore, please see below section on wrangling data to prioritize clade C not whatever the dominant clade is.**
+
 ```{r}
 algae_df %>% 
   group_by(sample_id, Clade) %>% # yes, 659 samples
@@ -152,6 +162,55 @@ head(coral_data)
 - Write to file
 ```{r}
 write_csv(coral_data, "../output/coral_data.csv")
+```
+
+
+# Clade C Prioritization
+
+As of 10-30-2023, client advised to focus on clade C (not clade A which was the dominant clade). 
+
+The below data wrangling obtains the clade C information per sample if the sample had any sequencing data for clade C. 
+
+Considerations: 
+
+- Filter for Clade C info and examine how many observations there are, especially when splitting by species because each species has a different genetic profile that was previously obtained in: 
+
+Buitrago-López, Cárdenas, et al. (2023). Disparate population and holobiont structure of pocilloporid corals across the Red Sea gradient demonstrate species-specific evolutionary trajectories. Molecular Ecology. 2023;32:2151–2173. DOI: 10.1111/mec.16871 
+
+- Species matters. The statistical and machine learning modeling will be later split by species because they each have different characteristics. 
+
+## Filtering for Clade C and taking out 0 values for ITS2 count 
+
+#### Clade C has 139 rows with non-zero values. This is extremely small for machine learning. this will be balanced with non-C clade observations 
+```{r}
+algae_df %>% 
+  filter(Clade == "C") %>% 
+  filter(its2_count != 0) %>%  # 139 rows 
+  group_by(sample_id) # 111 sample IDs have sequencing data for clade C
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
 ```
 
 

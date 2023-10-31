@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 suppressMessages(library(tidyverse))
 ```
 # Questions:
@@ -56,7 +56,7 @@ al_tax # 88 by 5
 
 al_tax %>% 
   group_by(Clade) %>% 
-  summarise(n = n()) ### samples per clade are not as evenly stratified
+  summarise(n = n()) ### clades in the ITS2 table are not evenly stratified
 ```
 
 - How many algae species? 
@@ -80,8 +80,6 @@ al_tax %>%
 - Start with algae ITS2 table:  Take table with coral sample IDs and pivot to where they can be joined based on ITS2 (there is only one clade, majority, and profile per ITS2 and each coral sample has all ITS2s, of which there are 88)
 
 ```{r}
-
-
 algae %>% 
   # coral sample IDs are in 1 column
   # pivot to where the coral samples have all of the ITS2s 
@@ -321,12 +319,18 @@ ggsave("Plot_ct_maj_clade_species.png", device = "png", path = "../plots")
 ```{r}
 
 algae_df %>% 
+  # filter out 0 values to see actual sequencing info
+  filter(its2_count > 0) %>%  # 778 observations with actual non-zero info
   group_by(species, Clade) %>% 
   summarise(n = n()) %>% 
   arrange(-n)
 ```
+- It is important to note that as of 10-30-2023, the client is requesting to focus on clade C and this clade has only 86 observations in species S and 53 in species P. 
+
+- It is also worth mentioning in final report that future research may want to focus on sampling and sequencing for the under-represented clades. 
 
 - When grouping by sample ID and Clade, many samples have 50 rows of Clade A, 32 or so of Clade C, and only 1-4 of the other Clades. 
+
 - Within the 50, one sample id has several majority types with different ITS2 types but only one with have any value of count (abundance)
 ```{r}
 algae_df %>% 
@@ -338,8 +342,7 @@ algae_df %>%
   # arrange(sample_id)
 ```
 
-- Where are highest ITS2 counts?
-- Should ITS2 counts greater than 0 be taken out? 
+- Filter out 0 values to see the rows with sequencing info
 ```{r}
 algae_df %>% 
   arrange(-its2_count) %>% 
