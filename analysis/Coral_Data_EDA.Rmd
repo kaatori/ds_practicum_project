@@ -13,6 +13,8 @@ library(tidyverse)
 
 ## Exploratory Data Analysis of Joined Algae Clade & Bacteria in Coral Samples
 
+**Note: Please see revised data frame as rev_coral_join.csv that prioritizes clade C.**
+
 - Read in previously joined algae and bacteria data per coral. For the join process, see 'Join.Rmd'.  
 ```{r}
 read_csv("../output/coral_data.csv") -> corals

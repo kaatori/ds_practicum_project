@@ -219,7 +219,7 @@ rev_coral_join %>%
 
 ```
 
-## Write new data frame to csv for other analysis files
+## Write new data frame to csv for other analyses 
 ```{r}
 write_csv(rev_coral_join, "../output/rev_coral_join.csv")
 ```

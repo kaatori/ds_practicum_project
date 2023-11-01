@@ -46,11 +46,34 @@ write_csv(clr_bac_df, "../output/clr_bac_df.csv") # no sample column
 
 
 
-
+### Clade C Subset 
 ```{r}
+read_csv("../output/rev_coral_join.csv") %>% 
+  filter(Clade == "C") -> clade_c_data
 ```
 
 
 ```{r}
+# subset ASV columns for clr()
+select(clade_c_data, starts_with("ASV")) -> clade_c_asvs
+```
+
+
+```{r}
+library(compositions)
+clr(clade_c_asvs) %>% 
+  as.data.frame() -> clr_clade_c
+```
+
+```{r}
+# check if any columns sum to 0
+map(clr_clade_c, ~sum(.==0)) %>% 
+  as.data.frame() %>% 
+  pivot_longer(cols = everything()) %>% 
+  filter(value == 0)
+```
+
+```{r}
+write_csv(clr_clade_c, "../output/clr_clade_c.csv")
 ```
 
