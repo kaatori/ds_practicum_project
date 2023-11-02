@@ -246,7 +246,7 @@ ggsave("../plots/top_20_pca_P.png", top_20_pca_P, width = 14, bg = "#ffffffff")
 ```
 
 # Species S
-## Species S - Import Data
+## Species S - Filter Data
 
 ```{r}
 # section out the observations for species S and save
@@ -318,5 +318,99 @@ top_20_pca_S
 
 ```{r}
 ggsave("../plots/top_20_pca_S.png", top_20_pca_S, width = 14, bg='#ffffff')
+```
+
+# Clade C - Centered Log Ratio for Both Species
+
+## Read in Clade C Observations
+- ASV columns - all numeric
+```{r}
+read_csv("../output/clr_clade_c.csv") -> clr_clade_c
+```
+
+## Check for 'rescale a constant/zero column to unit variance' 
+- If the sum of the column is 0, then the ASV column is not giving any abundance counts in this dataset for Clade C observations. 
+```{r}
+map(clr_clade_c, ~mean(.)) %>% 
+  as.data.frame() %>% 
+  pivot_longer(cols = everything()) %>% 
+  arrange(value) %>% 
+  filter(value == 0) %>% 
+# save these into a list for removing before performing PCA
+  # also need to report to client that these are NOT sequenced in these data for clade C. 
+  select(name) -> zero_summed_clade_c
+
+# use the above to deselect these columns, as they will throw an error when performing PCA
+clr_clade_c %>% 
+  select(-(zero_summed_clade_c$name)) -> clr_clade_c_non_zero
+```
+## PCA - Clade C
+```{r}
+stats::prcomp(clr_clade_c_non_zero, 
+              scale. = T) -> pca_clade_c
+```
+
+```{r}
+library(factoextra)
+fviz_contrib(pca_clade_c, 
+             choice = "var", 
+             axes = 1, 
+             top = 20, 
+             title = "Clade C Top 20 Contributing ASVs in Dimension 1", 
+             ggtheme = theme_minimal()) -> PCA_Clade_C_Top_20
+
+PCA_Clade_C_Top_20
+```
+
+- From the plot above, does the bar chart ever dip? If so, how drastically? Where?
+```{r}
+fviz_contrib(pca_clade_c, 
+             choice = "var", 
+             axes = 1, 
+             top = 400, 
+             title = "Clade C Top Contributing ASVs in Dimension 1\nRed dashed line indicates average contribution", 
+             xtickslab.rt = 0,
+             #ylim(0.4, 0.7),
+             ggtheme = theme_minimal())
+```
+- Dashed red line indicates the average contribution of each ASV. 
+- The plateau shape indicates that there are a subset of ASV variables in Clade C observations that contribute approximately the same amount of variability. At the point where the plateau drops, the bacteria ASVs in Clade C contribute less and less to the overall variability. 
+- This seems to be approximately the first 100-130 ASVs for Clade C according to this particular dataset of samples. 
+
+```{r}
+fviz_pca_biplot(pca_clade_c, 
+                label = "var", 
+                addEllipses=TRUE, 
+                select.var = list(contrib = 5), 
+                repel = T, 
+                title = "Clade C - PCA Biplot"
+                )
+```
+
+
+
+
+
+```{r}
+fviz_pca_var(pca_clade_c, 
+             col.var="contrib", 
+             alpha.var="contrib", 
+             select.var = list(contrib = 5), 
+             repel = T,
+             title = "Clade C Variables - PCA"
+             ) 
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+```
+
+
+```{r}
 ```
 
