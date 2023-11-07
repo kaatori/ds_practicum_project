@@ -400,17 +400,34 @@ fviz_pca_var(pca_clade_c,
              title = "Clade C Variables - PCA"
              ) 
 ```
+- Obtain List of first 1000 ASVs for testing Logistic Regression
+```{r}
+# Access the loadings of the first two principal components
+loadings <- pca_clade_c$rotation[, 1:2]
 
+# Display the loadings to see which variables contribute the most to PC1 and PC2
+#loadings
+
+# access ordered asv names for binding columns
+names(clr_clade_c_non_zero) -> asv_names
+```
 
 ```{r}
+# Take the absolute values of the loadings
+abs(loadings) %>% 
+  as.data.frame()  -> abs_loadings
 
+
+map(abs_loadings, ~abs(.)) %>% 
+  as.data.frame() %>% 
+  bind_cols("ASV" = asv_names, 
+            .) %>% 
+  arrange(-PC1) %>% 
+  select(ASV) -> clade_c_pca_Ranks
 ```
 
 
 ```{r}
-```
-
-
-```{r}
+write_csv(clade_c_pca_Ranks, "../output/clade_c_pca_Ranks.csv")
 ```
 
