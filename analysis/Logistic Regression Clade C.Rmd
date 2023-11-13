@@ -306,6 +306,7 @@ pchisq(logreg$deviance, logreg$df.residual, lower.tail = FALSE)
 ### Start with balanced dataset first because will need to retransform after first 1000. 
 
 - They are in order so can simply take first 1000
+- Redo transformation based on relative first 1000
 
 ```{r}
 # lr_clr_df %>%
@@ -314,8 +315,8 @@ pchisq(logreg$deviance, logreg$df.residual, lower.tail = FALSE)
 lr_data[,1:1002] -> lr_data_1000
  
   
-bind_cols(lr_data_1000[,1:2], 
-          lr_data_1000[,-c(1,2)] %>% clr()
+bind_cols(lr_data_1000[,1:2], # sample id and Clade columns
+          lr_data_1000[,-c(1,2)] %>% clr() # re-do CLR transformation on relative first 1000 PCA
             ) -> lr_clr_df_1000
   
 ```
@@ -518,14 +519,86 @@ summary(logreg_150)
 - Please see the RandomForest.Rmd file for non-linear modeling. 
 
 
+# Lasso as ASV Selection
+# 1000
+
+LASSO does two things
+
+Shrinks that parameter estimates by penalizing larger slopes -> variance reduction
+
+De-selects variables by setting the slopes to 0 -> dimension reduction.
+```{r}
+head(lr_clr_df_1000)
+```
+
+```{r, error=TRUE}
+library(glmnet)
+
+lr_clr_df_1000 %>% 
+  mutate(Clade = as.character(Clade)) -> lr_clr_df_1000
+
+xfactors <- model.matrix(Clade ~ ., data = lr_clr_df_1000[, -1])
+#x        <- as.matrix(data.frame(age, bmi_p, xfactors))
+y <- as.factor(lr_clr_df_1000$Clade)
+
+dim(xfactors) # 278 x 1001 bc of no sample id 
+
+glm_lasso_1000 <- glmnet(x = xfactors, 
+                         y = Clade, 
+                         alpha = 1, # lasso
+                         family = "binomial")
+```
 
 
+```{r}
+library(glmnet)
+
+# Assuming your data frame is named df
+# Replace 'Response' with the actual name of your binary outcome variable
+
+# Create a formula for model.matrix
+formula <- as.formula(paste("Clade ~ .", sep = "", collapse = ""), env = environment(lr_clr_df_1000))
+
+# Create the design matrix
+x_matrix <- model.matrix(formula, data = lr_clr_df_1000[,-1])
+
+# Convert the response variable to a numerical vector
+y_vector <- as.numeric(lr_clr_df_1000$Clade) - 1  # glmnet expects 0/1 coding for binary response
+
+# Fit the LASSO model
+lasso_model <- glmnet(x_matrix, y_vector, alpha = 1, family = "binomial")
+
+# Print the coefficients
+#print(coef(lasso_model))
+
+```
 
 
+```{r}
+lasso_model
+
+plot(lasso_model, 
+     #xlim = c(-0.05, 1)
+     )
+
+coef(lasso_model) %>%  # automatically shows 'best' model
+  as.matrix() %>% 
+  as.data.frame() %>% 
+  map(., ~sum(.))
+```
 
 
+- There are many ASVs that have been 'deselected' with a dot ```.```. 
+- ASV0013 has coefficients of 
 
+```{r}
+set.seed(123)
+lasso_cv <- cv.glmnet(x_matrix, y_vector)
+```
 
-
+```{r}
+lasso_cv
+plot(lasso_cv)
+```
 
 
