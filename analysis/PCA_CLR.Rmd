@@ -344,11 +344,66 @@ map(clr_clade_c, ~mean(.)) %>%
 clr_clade_c %>% 
   select(-(zero_summed_clade_c$name)) -> clr_clade_c_non_zero
 ```
+
 ## PCA - Clade C
 ```{r}
 stats::prcomp(clr_clade_c_non_zero, 
               scale. = T) -> pca_clade_c
 ```
+
+- How many ASVs in Clade C contribute 80 % of the variance?
+```{r}
+#pca_clade_c
+summary(pca_clade_c)$importance %>% 
+  as_tibble() -> clade_c_pca_importance_matrix
+
+
+bind_cols(
+  name = c("StndDev", "IndivProp", "CumProp"), 
+  clade_c_pca_importance_matrix
+) %>% 
+# pivoting data drame so that cumulatives are in column
+  t() %>%  as.data.frame() %>% 
+  # moving up top row as column header
+  janitor::row_to_names(1) %>% ######## snapshot here for presentation
+  # filtering cumulative proportion column for greater > = 80 %
+  filter(CumProp >= 0.8) 
+
+```
+- At least 58 principal components contribute 80 % of the variance in CLade C ASV abundance data. 
+
+```{r}
+bind_cols(
+  name = c("StndDev", "IndivProp", "CumProp"), 
+  clade_c_pca_importance_matrix
+) %>% 
+# pivoting data drame so that cumulatives are in column
+  t() %>%  as.data.frame() %>% 
+  # moving up top row as column header
+  janitor::row_to_names(1) %>% 
+  ggplot(aes(x = as.numeric(CumProp) , y =  as.numeric(IndivProp))) +
+  geom_point() +
+  ggtitle("Clade C - PCA Results: Proportion of Variance", 
+          "Vertical lines indicate Lasso number of non-zero coefficients\nLambda.1se = 4 predictors, Lambda.min = 23 predictors") +
+  xlab("Cumulative Proportion") +
+  ylab("Proportion of Variance per Principal Component") +
+  theme_bw() +
+  geom_vline( xintercept = 0.175, colour = "red") +
+  geom_vline(xintercept = 0.5, color = "blue") #+ 
+  #ggrepel::geom_text_repel() +
+  # annotate("text", 
+  #          label = "Lasso ",
+  #          x = .2, y = .15, 
+  #          size = 8, 
+  #          colour = "red") +
+  #  annotate("text", 
+  #          label = "Lasso ",
+  #          x = .52, y = .15, 
+  #          size = 8, 
+  #          colour = "blue")
+```
+
+
 
 ```{r}
 library(factoextra)

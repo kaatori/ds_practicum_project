@@ -17,6 +17,8 @@ suppressMessages(library(tidyverse))
 ```{r}
 read_csv("../output/lr_data.csv") %>% 
   mutate(Clade = as.factor(Clade)) -> lr_data
+
+head(lr_data)
 ```
 
 
@@ -53,9 +55,28 @@ top50_corr_clade_c <- corrplot(cor_matrix_lr_data[1:50, 1:50],
 ```
 
 
+# From Lasso Regression with Clade as Binary Outcome, ASV00013 was kept in the model
+
+```{r}
+# read in taxonomy table to see which bacterium this is
+read_delim("../data/Files/16S_tax.txt") -> bac_tax
+
+
+bac_tax %>% 
+  filter(ASV == "ASV0013") %>% 
+  pivot_longer(cols = everything())
+```
 
 
 ```{r}
+#plot(log(lr_data$ASV0013), lr_data$Clade)
+
+ggplot(lr_data, aes( y = log(ASV0013), color = as.factor(Clade), fill = as.factor(Clade))) +
+  geom_histogram() +
+  coord_flip() +
+  facet_wrap(~Clade) +
+  xlab("Log of ASV0013 Counts") +
+  ylab("")
 ```
 
 

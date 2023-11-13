@@ -532,29 +532,27 @@ head(lr_clr_df_1000)
 ```
 
 ```{r, error=TRUE}
-library(glmnet)
-
-lr_clr_df_1000 %>% 
-  mutate(Clade = as.character(Clade)) -> lr_clr_df_1000
-
-xfactors <- model.matrix(Clade ~ ., data = lr_clr_df_1000[, -1])
-#x        <- as.matrix(data.frame(age, bmi_p, xfactors))
-y <- as.factor(lr_clr_df_1000$Clade)
-
-dim(xfactors) # 278 x 1001 bc of no sample id 
-
-glm_lasso_1000 <- glmnet(x = xfactors, 
-                         y = Clade, 
-                         alpha = 1, # lasso
-                         family = "binomial")
+# library(glmnet)
+# 
+# lr_clr_df_1000 %>% 
+#   mutate(Clade = as.character(Clade)) -> lr_clr_df_1000
+# 
+# xfactors <- model.matrix(Clade ~ ., data = lr_clr_df_1000[, -1])
+# #x        <- as.matrix(data.frame(age, bmi_p, xfactors))
+# y <- as.factor(lr_clr_df_1000$Clade)
+# 
+# dim(xfactors) # 278 x 1001 bc of no sample id 
+# 
+# glm_lasso_1000 <- glmnet(x = xfactors, 
+#                          y = Clade, 
+#                          alpha = 1, # lasso
+#                          family = "binomial")
 ```
 
 
 ```{r}
 library(glmnet)
 
-# Assuming your data frame is named df
-# Replace 'Response' with the actual name of your binary outcome variable
 
 # Create a formula for model.matrix
 formula <- as.formula(paste("Clade ~ .", sep = "", collapse = ""), env = environment(lr_clr_df_1000))
@@ -566,7 +564,10 @@ x_matrix <- model.matrix(formula, data = lr_clr_df_1000[,-1])
 y_vector <- as.numeric(lr_clr_df_1000$Clade) - 1  # glmnet expects 0/1 coding for binary response
 
 # Fit the LASSO model
-lasso_model <- glmnet(x_matrix, y_vector, alpha = 1, family = "binomial")
+lasso_model <- glmnet(x_matrix, 
+                      y_vector, 
+                      alpha = 1, 
+                      family = "binomial")
 
 # Print the coefficients
 #print(coef(lasso_model))
@@ -589,7 +590,7 @@ coef(lasso_model) %>%  # automatically shows 'best' model
 
 
 - There are many ASVs that have been 'deselected' with a dot ```.```. 
-- ASV0013 has coefficients of 
+- ASV0013 has coefficients 
 
 ```{r}
 set.seed(123)
@@ -601,4 +602,127 @@ lasso_cv
 plot(lasso_cv)
 ```
 
+- There is a difference of 23 variables vs 4 variables for the models with the minimum lambda vs. the lambda within 1 standard deviation. 
+
+- Default 'best' is the lambda within 1 standard deviation of the min lambda. 
+
+- ```lambda.1se``` is the default for the coefficients
+```{r}
+coef(lasso_cv) %>% 
+  as.matrix() %>% 
+  as.data.frame() %>% 
+  filter(s1 != 0)
+```
+
+- ```lambda.min``` results
+```{r}
+coef(lasso_cv, s = "lambda.min") %>% 
+  as.matrix() %>% 
+  as.data.frame() %>% 
+  filter(s1 != 0)
+```
+
+```{r}
+
+```
+
+# Lasso
+# 500
+
+```{r}
+# the below was previously subset
+# the data transformation was completed on the raw counts after the subset
+# to preserve the relativeness of the 500
+# is, did not subset after clr because the clr transformation is working off of the relative raw counts.
+dim(lr_clr_df_500)
+head(lr_clr_df_500)
+
+
+# Create a formula for model.matrix
+formula_500 <- as.formula(paste("Clade ~ .", sep = "", collapse = ""), env = environment(lr_clr_df_500))
+
+# Create the design matrix
+x_matrix_500 <- model.matrix(formula, data = lr_clr_df_500[,-1])
+
+# Convert the response variable to a numerical vector
+y_vector_500 <- as.numeric(lr_clr_df_500$Clade) - 1  # glmnet expects 0/1 coding for binary response
+
+# Fit the LASSO model
+lasso_model_500 <- glmnet(x_matrix_500, # use the reduced 500 ASV df
+                      y_vector_500, # reduced y vector of 0-1 response
+                      alpha = 1, 
+                      family = "binomial")
+
+
+#lasso_model_500
+```
+
+
+```{r}
+plot(lasso_model_500, 
+     xlim = c(-0.05, 100), 
+     ylim = c(-0.5, 0.5)
+     )
+
+coef(lasso_model_500) %>%  # automatically shows 'best' model
+  as.matrix() %>% 
+  as.data.frame() 
+```
+
+
+```{r}
+set.seed(123)
+lasso_500_cv <- cv.glmnet(x_matrix_500, y_vector_500)
+```
+
+### Lasso Model Resuts for 500 ASVs with Cross-Validation
+```{r}
+
+lasso_500_cv
+
+
+coef(lasso_500_cv) %>% # default is lambda.1se
+  as.matrix() %>% 
+  as.data.frame() %>% 
+  filter(s1 != 0)
+
+coef(lasso_500_cv, s = "lambda.min") %>% 
+  as.matrix() %>% 
+  as.data.frame() %>% 
+  filter(s1 != 0)
+```
+
+
+- With lambda.1se, the best model is with 2 ASVs:
+
+ASV0675 and 
+ASV0013
+
+- With lambda.min, the best model is with 11 ASVs:
+
+ASV1294		
+
+ASV2062	
+
+ASV0485	
+
+ASV1611	
+
+ASV0675	
+
+ASV0013		
+
+ASV0016		
+
+ASV0446		
+
+ASV0011
+
+```{r}
+plot(lasso_500_cv)
+```
+
+```{r}
+
+```
 
