@@ -1,0 +1,510 @@
+---
+title: "Logistic Regression for Clade C"
+author: "Cassandra Sperow"
+date: "2023-11-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Read in Data
+```{r}
+read_csv("../output/rev_coral_join.csv") -> rev_coral_join
+```
+
+## Clade C and Non-Clade C Label Subsetting
+```{r}
+# Assuming 'df' is your data frame with a column 'labels' and you want to balance the labels
+
+# Extract the minority class samples (139 observations)
+minority_class <- rev_coral_join[rev_coral_join$Clade == 'C', ]
+
+# Extract the majority class samples (the rest of the dataset)
+majority_class <- rev_coral_join[rev_coral_join$Clade != 'C', ]
+
+# Randomly sample from the majority class to match the size of the minority class
+set.seed(42)  # Set a seed for reproducibility
+balanced_majority <- majority_class[sample(nrow(majority_class), nrow(minority_class)), ]
+
+# Combine the balanced datasets
+balanced_df <- rbind(balanced_majority, minority_class)
+
+# Shuffle the rows to randomize the order
+balanced_df <- balanced_df[sample(nrow(balanced_df)), ]
+
+```
+
+
+```{r}
+dim(balanced_df)
+
+unique(balanced_df$Clade)
+
+length(balanced_df$Clade=="C")
+length(balanced_df$Clade != "C")
+```
+## Read in results from PCA Clade C Dim 1 Results
+```{r}
+read_csv("../output/clade_c_pca_Ranks.csv") -> clade_c_pca_Ranks
+```
+
+```{r}
+# subset ASV columns for Logistic Regression based on clade C PCA results in Dimension 1
+balanced_df %>% 
+  select(sample_id, Clade, (clade_c_pca_Ranks$ASV)) -> lr_data
+```
+
+```{r}
+#glimpse(lr_data)
+head(lr_data)
+```
+
+```{r}
+lr_data %>% 
+  mutate(Clade = case_when(Clade=="C" ~ 1, 
+                           .default = 0)) -> lr_data
+```
+
+### Double-check if any columns sum to 0
+```{r}
+# take out sample and clade columns for numeric only
+map(lr_data[,-c(1,2)], ~sum(.)) %>% 
+  as.data.frame() %>% 
+  pivot_longer(cols = everything()) %>% 
+  filter(value==0)
+
+dim(lr_data)
+```
+- No columns sum to 0. This had been taken care of when subsetting for Clade C to have ASVs sequenced in Clade C.
+
+- There is sequencing data for Clade C and non-Clade C observations that are all non-zero when summing each ASV column.
+
+
+```{r}
+dim(lr_data)
+```
+- 1,331 ASV columns
+- 1 sample ID column
+- 1 target label column of Clade
+
+## Perform recommended data transformation of Centered Log Ratio for bacteria
+```{r}
+library(compositions)
+lr_clr_columns <- clr(lr_data[,-c(1,2)]) %>% 
+  as.data.frame()
+
+# scaling the numeric columns to help with warning when running logistic regression
+scale(lr_clr_columns) %>% 
+  as.data.frame() -> lr_clr_columns
+
+head(lr_clr_columns)
+
+# bind back sample and clade columns
+bind_cols(
+  lr_data[,c(1,2)], 
+  lr_clr_columns
+) -> lr_clr_df
+
+head(lr_clr_df)
+
+sum(is.na(lr_clr_df))
+
+map(lr_clr_df, ~sum(is.na(.))) %>% 
+  as.data.frame() %>% 
+  pivot_longer(cols = everything()) %>% 
+  filter(value == NA)
+```
+
+```{r}
+any(is.na(lr_clr_df))
+```
+
+
+## Insert fancy corr plot here - whether on CLR or counts based 
+## t-SNE plot of Clade C and non-Clade C
+```{r}
+library(tsne)
+library(plotly)
+data(lr_clr_df)
+
+features <- subset(lr_clr_df, select = -c(1,2)) 
+
+set.seed(0)
+tsne <- tsne(features, initial_dims = 2)
+```
+```{r}
+tsne <- data.frame(tsne)
+pdb <- cbind(tsne,lr_clr_df$Clade)
+options(warn = -1)
+fig2 <-  plot_ly(data = pdb ,x =  ~X1, y = ~X2, type = 'scatter', mode = 'markers', split = ~lr_clr_df$Clade)
+
+fig2 <- fig2 %>%
+  layout(
+    plot_bgcolor = "#e5ecf6"
+  )
+
+fig2
+```
+- Data are not linearly separable, but the microbiome community normally does logistic modeling for disease diagnosis. 
+
+- Therefore, will attempt logistic below, but a better technique that would yield some sort of interpretability for classification may be Random Forest.
+
+
+# GGally::ggpairs for Clade C
+```{r}
+# quick subset for visualization
+subset_lr <- lr_clr_df[,-1] %>% 
+  select(1:10)
+
+GGally::ggpairs(subset_lr, aes(color = as.factor(Clade))) -> ggpairs_10_clade_c
+
+ggpairs_10_clade_c
+
+ggsave("../plots/ggpairs_10_clade_c.png", width = 14, height = 12, plot = ggpairs_10_clade_c)
+
+```
+
+## Separate Training and Testing for later after experimenting with whole dataset first
+```{r}
+set.seed(1234)
+Z <- sample(nrow(lr_clr_df), .85*nrow(lr_clr_df))
+lr_train <- lr_clr_df[Z,]
+lr_test <- lr_clr_df[-Z,]
+
+# take a peek at training data
+head(lr_train, 20)
+dim(lr_train)
+dim(lr_test)
+```
+
+
+### check label distribution of CLade C = 1 and Non-Clade-C = 0
+```{r}
+ggplot(lr_clr_df, aes( x = Clade)) +
+  geom_histogram(stat = 'count') +
+  ggtitle("Label Distributions of Clade C = 1 vs. Non-Clade C = 0") +
+  theme_bw()
+```
+
+# Experiment with whole dataset based on CLR Transformation
+## glmnet::glmnet
+## 3226
+```{r}
+
+y = as.factor(lr_clr_df$Clade)
+x = as.matrix(lr_clr_df[,-c(1,2)])
+
+any(is.na(x))
+
+library(glmnet)
+lr_model <- glmnet(x, y, 
+                 family = "binomial", 
+                 #alpha = 1 # lasso L1 norm
+                 alpha = 0 # ridge L2 norm
+                )
+```
+
+
+
+```{r}
+plot(lr_model)
+```
+```{r}
+summary(lr_model)
+lr_model
+```
+
+## Cross-Validation
+```{r}
+cv_results <- cv.glmnet(x, y,
+                        family = "binomial",
+                        nfolds = 10)
+```
+
+
+```{r}
+plot(cv_results)
+```
+
+
+```{r}
+cv_results
+```
+
+
+```{r}
+summary(lr_model)
+```
+
+
+```{r}
+best_lambda <- lr_model$lambda.min
+
+# Refit the model with the selected lambda
+best_model <- glmnet(x, y, family = "binomial", alpha = 0, lambda = best_lambda)
+
+coefficients(best_model)[,1:12]
+```
+
+
+
+# Stats::glm - Client needs p-values for each bacteria 
+# 3226
+R documentation: https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/glm
+
+278 x 3226 ASVs
+```{r}
+library(stats)
+
+logreg <- stats::glm(as.factor(Clade) ~ . ,
+                     data = lr_clr_df[,-1],
+                     family = "binomial")
+```
+
+
+```{r}
+summary(logreg)
+```
+
+Recall from Adv ML:
+- The n << p here is an underdetermined system. There is not a unique solution. 
+- If standard errors of coefficients are very large, which in this case they are, this is not a stable model.
+
+Recall from Regression Classes and Other Course Notes: 
+- Null Deviance is for a model with no predictors; just the intercept. 
+- Null Deviance measures the goodness of fit of a model with no predictors.
+- '$df.null' is the degrees of freedom for the null model: n-1 observations
+
+
+
+
+- Compare the null model with the logreg full model with ~3K predictors
+- Null Hypothesis:  Logreg does not provide a significantly better fit for these data
+- Alt hypothesis: Logreg provides a much better fit for these data.
+```{r}
+pchisq(logreg$null.deviance, logreg$df.null, lower.tail = FALSE)
+```
+
+- The above statistical test indicates that there is evidence for the alternative hypothesis that the model with predictors is much better than the null model with the intercept. 
+
+```{r}
+# Bad fit in notes had a p-value of 0.9995629 from Ressler
+# good fit would be the opposite
+pchisq(logreg$deviance, logreg$df.residual, lower.tail = FALSE)
+```
+
+
+
+## VIF
+```{r}
+# library(car)
+# vif_model_lr_model <-vif(lr_model)
+# vif_model_logreg <- vif(best_model)
+
+```
+
+
+## Need to take the first 1000 from the PCA results in Dim 1 to see if it helps some of the issues in modeling
+
+- They are in order so can simply take first 1000
+
+```{r}
+lr_clr_df %>% 
+  select(1:1002) -> lr_clr_df_1000 # because of id column and response column
+```
+
+## Logistic with Reduced 1000 ASVs
+### glmnet::glmnet
+### 1000
+### L2 regularization
+```{r}
+y = as.factor(lr_clr_df_1000$Clade)
+x = as.matrix(lr_clr_df_1000[,-c(1,2)])
+
+#glimpse(y)
+#dim(x)
+
+library(glmnet)
+lr_model_1000 <- glmnet(x, y, 
+                        family = "binomial", 
+                        #alpha = 1 ,# lasso L1 norm
+                        alpha = 0 # ridge L2 norm
+                )
+```
+
+
+```{r}
+lr_model_1000
+summary(lr_model_1000)
+```
+
+```{r}
+plot(lr_model_1000)
+plot(lr_model_1000, xlim = c(0, .1), ylim = c(-0.02, 0.02))
+```
+
+## Cross-Validation
+```{r}
+cv_results <- cv.glmnet(x, y,
+                        family = "binomial",
+                        nfolds = 10)
+```
+
+
+```{r}
+plot(cv_results)
+```
+
+```{r}
+best_lambda_1000 <- lr_model_1000$lambda.min
+
+# Refit the model with the selected lambda
+best_model_1000 <- glmnet(x, y, family = "binomial", alpha = 0, lambda = best_lambda_1000)
+
+coefficients(best_model_1000)[,1:3]
+```
+```{r}
+coef(best_model_1000)
+```
+
+
+### stats:glm
+### 1000
+
+```{r}
+library(stats)
+
+logreg_1000 <- stats::glm(as.factor(Clade) ~ . ,
+                          data = lr_clr_df_1000[,-1],
+                          family = "binomial")
+```
+
+
+```{r}
+summary(logreg_1000)
+```
+
+```{r}
+pchisq(logreg_1000$null.deviance, logreg_1000$df.null, lower.tail = FALSE)
+```
+
+- The above statistical test indicates that there is evidence for the alternative hypothesis that the model with predictors is much better than the null model with the intercept. 
+
+```{r}
+# Bad fit in notes example had a p-value of 0.9995629 from Ressler
+# good fit would be the opposite
+pchisq(logreg_1000$deviance, logreg_1000$df.residual, lower.tail = FALSE)
+```
+
+# Using top 500 ASVs to see if the model improves
+
+- They are in order so can simply take first 500
+
+```{r}
+lr_clr_df %>% 
+  select(1:502) -> lr_clr_df_500 # because of id column and response column
+
+dim(lr_clr_df_500)
+```
+
+## Logistic with Reduced 500 ASVs
+### glmnet::glmnet
+
+```{r}
+y = as.factor(lr_clr_df_500$Clade)
+x = as.matrix(lr_clr_df_500[,-c(1,2)])
+
+glimpse(y)
+dim(x)
+
+library(glmnet)
+lr_model_500 <- glmnet(x, y, 
+                        family = "binomial", 
+                        #alpha = 1 ,# lasso L1 norm
+                        alpha = 0 # ridge L2 norm
+                )
+```
+
+
+```{r}
+lr_model_500
+summary(lr_model_500)
+```
+
+```{r}
+plot(lr_model_500)
+#plot(lr_model_500, xlim = c(0, 50), ylim = c(-0.02, 0.02))
+```
+
+## Cross-Validation
+```{r}
+cv_results_500 <- cv.glmnet(x, y,
+                        family = "binomial",
+                        nfolds = 10)
+```
+
+
+```{r}
+plot(cv_results_500)
+```
+
+```{r}
+best_lambda_500 <- lr_model_500$lambda.min
+
+# Refit the model with the selected lambda
+best_model_500 <- glmnet(x, y, family = "binomial", alpha = 0, lambda = best_lambda_500)
+
+coefficients(best_model_500)
+```
+
+
+
+
+
+### stats::glm for first 500
+```{r}
+library(stats)
+
+logreg_500 <- stats::glm(as.factor(Clade) ~ . ,
+                          data = lr_clr_df_500[,-1],
+                          family = "binomial")
+```
+
+
+```{r}
+summary(logreg_500)
+```
+
+
+- The p-values above are all the same which is not good. 
+
+
+## From PCA of Clade C, there were about 150 or so ASVs that contributed the most in Dimension 1
+```{r}
+lr_clr_150 <- lr_clr_df[1:152] # sample id and Clade
+
+logreg_150 <- stats::glm(as.factor(Clade) ~ . ,
+                          data = lr_clr_150[,-1],
+                          family = "binomial")
+```
+- For these data, it is not possible to get a decent logistic regression model even when reducing the ASV columns to the minimum from PCA analysis. 
+
+- The goal was to try and estimate or explain which ASVs might present the most impact for Clade C, but thes data from the t--SNE plot above and subsequent logistic modeling attempts do not produce a good model. 
+
+- Please see the RandomForest.Rmd file for non-linear modeling. 
+
+
+
+
+
+
+
+
+
+
+
+
+

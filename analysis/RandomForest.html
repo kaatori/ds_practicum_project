@@ -10263,6 +10263,148 @@ importance(BAG_8) %&gt;%
 ## ASV16068       0.000000e+00</code></pre>
 </div>
 </div>
+<div id="to-see-if-a-better-error-rate-can-be-possible-take-original-data-and-subset-first-1000" class="section level1">
+<h1>To see if a better error rate can be possible, take original data
+and subset first 1000</h1>
+<pre class="r"><code>read_csv( &quot;../output/lr_data.csv&quot;) %&gt;% 
+  mutate(Clade = as.factor(Clade))-&gt; lr_data</code></pre>
+<pre><code>## Rows: 278 Columns: 3228
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr    (1): sample_id
+## dbl (3227): Clade, ASV1236, ASV0421, ASV0691, ASV0899, ASV1004, ASV1041, ASV...
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>head(lr_data)</code></pre>
+<pre><code>## # A tibble: 6 × 3,228
+##   sample_id  Clade ASV1236 ASV0421 ASV0691 ASV0899 ASV1004 ASV1041 ASV1058
+##   &lt;chr&gt;      &lt;fct&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1 SKAU-R2-23 1           0       0       0       0       0       0       0
+## 2 SWAJ-R4-3  0           0       0       0       0       0       0       0
+## 3 SYAN-R3-19 1           0       0       0       0       0       0       0
+## 4 PMAQ-R2-19 0           0       0       0       0       0       0       0
+## 5 SDOG-R3-6  0           0       0       0       0       0       0       0
+## 6 PDOG-R2-22 0         234     147      90     103      60      42      49
+## # ℹ 3,219 more variables: ASV12542 &lt;dbl&gt;, ASV1294 &lt;dbl&gt;, ASV13113 &lt;dbl&gt;,
+## #   ASV1318 &lt;dbl&gt;, ASV2269 &lt;dbl&gt;, ASV2542 &lt;dbl&gt;, ASV2660 &lt;dbl&gt;, ASV2737 &lt;dbl&gt;,
+## #   ASV2840 &lt;dbl&gt;, ASV3053 &lt;dbl&gt;, ASV3077 &lt;dbl&gt;, ASV3134 &lt;dbl&gt;, ASV3140 &lt;dbl&gt;,
+## #   ASV3579 &lt;dbl&gt;, ASV6119 &lt;dbl&gt;, ASV7557 &lt;dbl&gt;, ASV8422 &lt;dbl&gt;, ASV1086 &lt;dbl&gt;,
+## #   ASV1310 &lt;dbl&gt;, ASV15750 &lt;dbl&gt;, ASV16905 &lt;dbl&gt;, ASV2033 &lt;dbl&gt;,
+## #   ASV2089 &lt;dbl&gt;, ASV2127 &lt;dbl&gt;, ASV2725 &lt;dbl&gt;, ASV2804 &lt;dbl&gt;, ASV3075 &lt;dbl&gt;,
+## #   ASV3327 &lt;dbl&gt;, ASV3342 &lt;dbl&gt;, ASV3532 &lt;dbl&gt;, ASV3600 &lt;dbl&gt;, …</code></pre>
+<div id="subset-first-1000-and-redo-clr-transformation-to-see-if-error-rate-can-improve" class="section level3">
+<h3>Subset first 1000 and redo CLR transformation to see if error rate
+can improve</h3>
+<pre class="r"><code>library(compositions)</code></pre>
+<pre><code>## Welcome to compositions, a package for compositional data analysis.
+## Find an intro with &quot;? compositions&quot;</code></pre>
+<pre><code>## 
+## Attaching package: &#39;compositions&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:stats&#39;:
+## 
+##     anova, cor, cov, dist, var</code></pre>
+<pre><code>## The following object is masked from &#39;package:graphics&#39;:
+## 
+##     segments</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     %*%, norm, scale, scale.default</code></pre>
+<pre class="r"><code>lr_data[,1:1002] -&gt; lr_data_1000
+ 
+  
+bind_cols(lr_data_1000[,1:2], 
+          lr_data_1000[,-c(1,2)] %&gt;% clr()
+            ) -&gt; lr_clr_df_1000
+
+head(lr_clr_df_1000)</code></pre>
+<pre><code>## # A tibble: 6 × 1,002
+##   sample_id  Clade ASV1236 ASV0421 ASV0691 ASV0899 ASV1004 ASV1041 ASV1058
+##   &lt;chr&gt;      &lt;fct&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1 SKAU-R2-23 1        0      0       0       0      0        0       0    
+## 2 SWAJ-R4-3  0        0      0       0       0      0        0       0    
+## 3 SYAN-R3-19 1        0      0       0       0      0        0       0    
+## 4 PMAQ-R2-19 0        0      0       0       0      0        0       0    
+## 5 SDOG-R3-6  0        0      0       0       0      0        0       0    
+## 6 PDOG-R2-22 0        1.38   0.913   0.423   0.557  0.0171  -0.340  -0.185
+## # ℹ 993 more variables: ASV12542 &lt;dbl&gt;, ASV1294 &lt;dbl&gt;, ASV13113 &lt;dbl&gt;,
+## #   ASV1318 &lt;dbl&gt;, ASV2269 &lt;dbl&gt;, ASV2542 &lt;dbl&gt;, ASV2660 &lt;dbl&gt;, ASV2737 &lt;dbl&gt;,
+## #   ASV2840 &lt;dbl&gt;, ASV3053 &lt;dbl&gt;, ASV3077 &lt;dbl&gt;, ASV3134 &lt;dbl&gt;, ASV3140 &lt;dbl&gt;,
+## #   ASV3579 &lt;dbl&gt;, ASV6119 &lt;dbl&gt;, ASV7557 &lt;dbl&gt;, ASV8422 &lt;dbl&gt;, ASV1086 &lt;dbl&gt;,
+## #   ASV1310 &lt;dbl&gt;, ASV15750 &lt;dbl&gt;, ASV16905 &lt;dbl&gt;, ASV2033 &lt;dbl&gt;,
+## #   ASV2089 &lt;dbl&gt;, ASV2127 &lt;dbl&gt;, ASV2725 &lt;dbl&gt;, ASV2804 &lt;dbl&gt;, ASV3075 &lt;dbl&gt;,
+## #   ASV3327 &lt;dbl&gt;, ASV3342 &lt;dbl&gt;, ASV3532 &lt;dbl&gt;, ASV3600 &lt;dbl&gt;, …</code></pre>
+<pre class="r"><code>library(randomForest)
+set.seed(123)
+BAG_t_1000 &lt;- randomForest(lr_clr_df_1000$Clade ~ . ,
+                     data = lr_clr_df_1000[,-c(1,2)])
+
+BAG_t_1000</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(formula = lr_clr_df_1000$Clade ~ ., data = lr_clr_df_1000[,      -c(1, 2)]) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 31
+## 
+##         OOB estimate of  error rate: 36.69%
+## Confusion matrix:
+##    0  1 class.error
+## 0 83 56   0.4028777
+## 1 46 93   0.3309353</code></pre>
+<ul>
+<li>The error rate did not improve when only using 1000 ASVs from
+PCA.</li>
+</ul>
+</div>
+<div id="what-about-top-500" class="section level2">
+<h2>What about top 500</h2>
+<pre class="r"><code>lr_data[,1:502] -&gt; lr_data_500
+ 
+  
+bind_cols(lr_data_500[,1:2], 
+          lr_data_500[,-c(1,2)] %&gt;% clr()
+            ) -&gt; lr_clr_df_500
+
+head(lr_clr_df_500)</code></pre>
+<pre><code>## # A tibble: 6 × 502
+##   sample_id  Clade ASV1236 ASV0421 ASV0691 ASV0899 ASV1004 ASV1041 ASV1058
+##   &lt;chr&gt;      &lt;fct&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1 SKAU-R2-23 1        0      0       0       0      0        0       0    
+## 2 SWAJ-R4-3  0        0      0       0       0      0        0       0    
+## 3 SYAN-R3-19 1        0      0       0       0      0        0       0    
+## 4 PMAQ-R2-19 0        0      0       0       0      0        0       0    
+## 5 SDOG-R3-6  0        0      0       0       0      0        0       0    
+## 6 PDOG-R2-22 0        1.38   0.912   0.421   0.556  0.0158  -0.341  -0.187
+## # ℹ 493 more variables: ASV12542 &lt;dbl&gt;, ASV1294 &lt;dbl&gt;, ASV13113 &lt;dbl&gt;,
+## #   ASV1318 &lt;dbl&gt;, ASV2269 &lt;dbl&gt;, ASV2542 &lt;dbl&gt;, ASV2660 &lt;dbl&gt;, ASV2737 &lt;dbl&gt;,
+## #   ASV2840 &lt;dbl&gt;, ASV3053 &lt;dbl&gt;, ASV3077 &lt;dbl&gt;, ASV3134 &lt;dbl&gt;, ASV3140 &lt;dbl&gt;,
+## #   ASV3579 &lt;dbl&gt;, ASV6119 &lt;dbl&gt;, ASV7557 &lt;dbl&gt;, ASV8422 &lt;dbl&gt;, ASV1086 &lt;dbl&gt;,
+## #   ASV1310 &lt;dbl&gt;, ASV15750 &lt;dbl&gt;, ASV16905 &lt;dbl&gt;, ASV2033 &lt;dbl&gt;,
+## #   ASV2089 &lt;dbl&gt;, ASV2127 &lt;dbl&gt;, ASV2725 &lt;dbl&gt;, ASV2804 &lt;dbl&gt;, ASV3075 &lt;dbl&gt;,
+## #   ASV3327 &lt;dbl&gt;, ASV3342 &lt;dbl&gt;, ASV3532 &lt;dbl&gt;, ASV3600 &lt;dbl&gt;, …</code></pre>
+<pre class="r"><code>set.seed(123)
+BAG_t_500 &lt;- randomForest(lr_clr_df_500$Clade ~ . ,
+                     data = lr_clr_df_500[,-c(1,2)])
+
+BAG_t_500</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(formula = lr_clr_df_500$Clade ~ ., data = lr_clr_df_500[,      -c(1, 2)]) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 22
+## 
+##         OOB estimate of  error rate: 38.49%
+## Confusion matrix:
+##    0  1 class.error
+## 0 76 63   0.4532374
+## 1 44 95   0.3165468</code></pre>
+<ul>
+<li>The error rate increased again higher.</li>
+</ul>
+</div>
+</div>
 
 
 

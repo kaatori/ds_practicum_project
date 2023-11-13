@@ -1,0 +1,70 @@
+---
+title: "Clade C Correlation Plot"
+author: "Cassandra Sperow"
+date: "2023-11-12"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
+```
+
+## Clade C
+
+```{r}
+read_csv("../output/lr_data.csv") %>% 
+  mutate(Clade = as.factor(Clade)) -> lr_data
+```
+
+
+## Correlation Matrix on Counts
+```{r}
+
+cor_matrix_lr_data <- cor(lr_data[,-c(1,2)])
+
+cor_matrix_lr_data[1:20,1:20]
+```
+
+```{r}
+png(filename = "../plots/top20_corr_clade_c.png",
+    width = 1200, height = 800)
+
+library(corrplot)
+top20_corr_clade_c <- corrplot(cor_matrix_lr_data[1:20, 1:20], 
+                               method = "circle")
+
+```
+
+```{r}
+top20_corr_clade_c
+```
+
+
+
+## Correlation Matrix on CLR
+
+```{r, error=TRUE}
+clr(lr_data[,-c(1,2)]) -> lr_clr
+
+cor_matrix_clr_lr_data <- cor(lr_clr)
+
+cor_matrix_clr_lr_data[1:20,1:20]
+```
+
+
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+

@@ -142,30 +142,64 @@ importance(BAG_8) %>%
   arrange(-MeanDecreaseGini)
 ```
 
-
+# To see if a better error rate can be possible, take original data and subset first 1000
 ```{r}
+read_csv( "../output/lr_data.csv") %>% 
+  mutate(Clade = as.factor(Clade))-> lr_data
 ```
 
 
 ```{r}
+head(lr_data)
+```
+
+### Subset first 1000 and redo CLR transformation to see if error rate can improve
+```{r}
+library(compositions)
+lr_data[,1:1002] -> lr_data_1000
+ 
+  
+bind_cols(lr_data_1000[,1:2], 
+          lr_data_1000[,-c(1,2)] %>% clr()
+            ) -> lr_clr_df_1000
+
+head(lr_clr_df_1000)
 ```
 
 
 ```{r}
+library(randomForest)
+set.seed(123)
+BAG_t_1000 <- randomForest(lr_clr_df_1000$Clade ~ . ,
+                     data = lr_clr_df_1000[,-c(1,2)])
+
+BAG_t_1000
+```
+
+- The error rate did not improve when only using 1000 ASVs from PCA.
+
+## What about top 500 
+```{r}
+lr_data[,1:502] -> lr_data_500
+ 
+  
+bind_cols(lr_data_500[,1:2], 
+          lr_data_500[,-c(1,2)] %>% clr()
+            ) -> lr_clr_df_500
+
+head(lr_clr_df_500)
 ```
 
 
 ```{r}
+set.seed(123)
+BAG_t_500 <- randomForest(lr_clr_df_500$Clade ~ . ,
+                     data = lr_clr_df_500[,-c(1,2)])
+
+BAG_t_500
 ```
 
-
-```{r}
-```
-
-
-```{r}
-```
-
+- The error rate increased again higher. 
 
 ```{r}
 ```

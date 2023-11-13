@@ -46,6 +46,8 @@ unique(balanced_df$Clade)
 length(balanced_df$Clade=="C")
 length(balanced_df$Clade != "C")
 ```
+
+
 ## Read in results from PCA Clade C Dim 1 Results
 ```{r}
 read_csv("../output/clade_c_pca_Ranks.csv") -> clade_c_pca_Ranks
@@ -86,9 +88,12 @@ dim(lr_data)
 ```{r}
 dim(lr_data)
 ```
-- 1,331 ASV columns
-- 1 sample ID column
-- 1 target label column of Clade
+
+### Inserted this afterwards to be able to work on Random Forest modeling
+```{r}
+write_csv(lr_data, "../output/lr_data.csv")
+```
+
 
 ## Perform recommended data transformation of Centered Log Ratio for bacteria
 ```{r}
@@ -123,14 +128,6 @@ any(is.na(lr_clr_df))
 ```
 
 
-
-## Correlation Matrix on CLR 
-```{r}
-cor(lr_clr_df[,-c(1,2)]) -> cor_lr_clr
-```
-
-
-## Insert fancy corr plot here - whether on CLR or counts based 
 ## t-SNE plot of Clade C and non-Clade C
 ```{r}
 library(tsne)
@@ -305,22 +302,22 @@ pchisq(logreg$deviance, logreg$df.residual, lower.tail = FALSE)
 
 
 
-## VIF
-```{r}
-# library(car)
-# vif_model_lr_model <-vif(lr_model)
-# vif_model_logreg <- vif(best_model)
-
-```
-
-
-## Need to take the first 1000 from the PCA results in Dim 1 to see if it helps some of the issues in modeling
+## 1000 from the PCA results in Dim 1 to see if it helps some of the issues in modeling
+### Start with balanced dataset first because will need to retransform after first 1000. 
 
 - They are in order so can simply take first 1000
 
 ```{r}
-lr_clr_df %>% 
-  select(1:1002) -> lr_clr_df_1000 # because of id column and response column
+# lr_clr_df %>%
+#   select(1:1002) -> lr_clr_df_1000 # because of id column and response column
+
+lr_data[,1:1002] -> lr_data_1000
+ 
+  
+bind_cols(lr_data_1000[,1:2], 
+          lr_data_1000[,-c(1,2)] %>% clr()
+            ) -> lr_clr_df_1000
+  
 ```
 
 ## Logistic with Reduced 1000 ASVs
@@ -408,13 +405,22 @@ pchisq(logreg_1000$deviance, logreg_1000$df.residual, lower.tail = FALSE)
 
 # Using top 500 ASVs to see if the model improves
 
-- They are in order so can simply take first 500
+- They are in order so can simply take first 500, but need to start from counts so that the CLR transformation is relative to the 500 ASVs.
 
 ```{r}
-lr_clr_df %>% 
-  select(1:502) -> lr_clr_df_500 # because of id column and response column
+# lr_clr_df %>% 
+#   select(1:502) -> lr_clr_df_500 # because of id column and response column
+
+
+lr_data[,1:502] -> lr_data_500
+ 
+  
+bind_cols(lr_data_500[,1:2], 
+          lr_data_500[,-c(1,2)] %>% clr()
+            ) -> lr_clr_df_500
 
 dim(lr_clr_df_500)
+head(lr_clr_df_500)
 ```
 
 ## Logistic with Reduced 500 ASVs
@@ -485,19 +491,41 @@ logreg_500 <- stats::glm(as.factor(Clade) ~ . ,
 summary(logreg_500)
 ```
 
+
+- The p-values above are all the same which is not good. 
+
+
+## From PCA of Clade C, there were about 150 or so ASVs that contributed the most in Dimension 1
 ```{r}
-pchisq(logreg_500$null.deviance, logreg_500$df.null, lower.tail = FALSE)
+bind_cols(lr_data[,1:2], 
+lr_data[3:152] %>% clr() # sample id and Clade
+) -> lr_clr_150
+
+logreg_150 <- stats::glm(as.factor(Clade) ~ . ,
+                          data = lr_clr_150[,-1],
+                          family = "binomial")
 ```
 
-- The above statistical test indicates that there is evidence for the alternative hypothesis that the model with predictors is much better than the null model with the intercept. 
-
 ```{r}
-# Bad fit in notes example had a p-value of 0.9995629 from Ressler
-# good fit would be the opposite
-pchisq(logreg_500$deviance, logreg_500$df.residual, lower.tail = FALSE)
+summary(logreg_150)
 ```
 
-```{r}
 
-```
+- For these data, it is not possible to get a decent logistic regression model even when reducing the ASV columns to the minimum from PCA analysis. 
+
+- The goal was to try and estimate or explain which ASVs might present the most impact for Clade C, but thes data from the t--SNE plot above and subsequent logistic modeling attempts do not produce a good model. 
+
+- Please see the RandomForest.Rmd file for non-linear modeling. 
+
+
+
+
+
+
+
+
+
+
+
+
 
