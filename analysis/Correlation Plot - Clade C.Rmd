@@ -20,7 +20,7 @@ read_csv("../output/lr_data.csv") %>%
 ```
 
 
-## Correlation Matrix on Counts
+## Correlation Matrix - Top 20
 ```{r}
 
 cor_matrix_lr_data <- cor(lr_data[,-c(1,2)])
@@ -38,20 +38,18 @@ top20_corr_clade_c <- corrplot(cor_matrix_lr_data[1:20, 1:20],
 
 ```
 
+
+
+## Correlation Matrix - Top 50
+- Anything over 50 gets small and hard to read
 ```{r}
-top20_corr_clade_c
-```
+png(filename = "../plots/top50_corr_clade_c.png",
+    width = 1200, height = 800)
 
+library(corrplot)
+top50_corr_clade_c <- corrplot(cor_matrix_lr_data[1:50, 1:50], 
+                               method = "circle")
 
-
-## Correlation Matrix on CLR
-
-```{r, error=TRUE}
-clr(lr_data[,-c(1,2)]) -> lr_clr
-
-cor_matrix_clr_lr_data <- cor(lr_clr)
-
-cor_matrix_clr_lr_data[1:20,1:20]
 ```
 
 
