@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 suppressMessages(library(tidyverse))
 ```
 
-# Random Forest Modeling of Clade C Coral Data
+# Experimental Random Forest Modeling of Clade C Coral Data
 - Logistic regression has proven to not be a good method of modeling the CLade C data. The data are inherently non-linear and the ASVs have many dependencies presenting multicollinearity. 
 
 - To obtain an index of the ASVs or variables that define Clade C the most, a non-parametric method such as RandomForest is useful and allows for interpretability of the model with its outut of an importance list. 
@@ -37,7 +37,7 @@ BAG_t
 - With taking out the ITS2 type column and the sample ID column, the random forest model gives an error rate of about 29 % overall. 
 
 ```{r}
-plot(BAG_t)
+base::plot(BAG_t)
 ```
 
 
@@ -78,7 +78,9 @@ importance(BAG_8) %>%
   arrange(-MeanDecreaseGini)
 ```
 
-# Try again without the ITS2 count as it would also be highly correlated with Clade C. 
+
+
+### Try again without the ITS2 count as it would also be highly correlated with Clade C. 
 
 ```{r}
 library(randomForest)
@@ -92,7 +94,7 @@ BAG_t
 - The error rate increases rather than decreases when ITS2 count is taken out. 
 
 ```{r}
-plot(BAG_t)
+base::plot(BAG_t)
 ```
 
 - Seems a lot less stable
@@ -142,7 +144,10 @@ importance(BAG_8) %>%
   arrange(-MeanDecreaseGini)
 ```
 
-# To see if a better error rate can be possible, take original data and subset first 1000
+
+# ASVs Only 1000 from PCA Results for Clade C
+
+## Read in original data with PCA results for Clade C as ordered ASV columns
 ```{r}
 read_csv( "../output/lr_data.csv") %>% 
   mutate(Clade = as.factor(Clade))-> lr_data
@@ -152,8 +157,12 @@ read_csv( "../output/lr_data.csv") %>%
 ```{r}
 head(lr_data)
 ```
+- The ASV columns are ordered in terms of the PCA results for Clade C from Dimension 1. 
 
-### Subset first 1000 and redo CLR transformation to see if error rate can improve
+### RandomForest 1000 ASVs
+
+- CLR transformation recommended by client and used also in Ridge/Lasso Modeling
+- To compare with Ridge/Lasso Modeling, these are the same along with 85 % training data.
 ```{r}
 library(compositions)
 lr_data[,1:1002] -> lr_data_1000
@@ -170,15 +179,29 @@ head(lr_clr_df_1000)
 ```{r}
 library(randomForest)
 set.seed(123)
-BAG_t_1000 <- randomForest(lr_clr_df_1000$Clade ~ . ,
-                     data = lr_clr_df_1000[,-c(1,2)])
+BAG_t_1000 <- randomForest(lr_clr_df_1000$Clade ~ . , # clade is factor
+                     data = lr_clr_df_1000[,-c(1)], # minus sample id
+                     )
 
 BAG_t_1000
+base::plot(BAG_t_1000)
+
+############################## optimal number of trees
+(BAG_t_1000$err.rate |> as.data.frame())$OOB |> which.min() # 464
 ```
 
-- The error rate did not improve when only using 1000 ASVs from PCA.
+```{r}
+############################## find optimal mtry
+set.seed(3)
+# training set
+Z_1000 <- sample(nrow(lr_clr_df_1000), .85*nrow(lr_clr_df_1000)) # same % as lasso/ridge
+tuneRF(lr_clr_df_1000[Z_1000,-c(1,2)], # x train minus sample id and clade columns
+       lr_clr_df_1000[Z_1000,]$Clade, mtryStart = 2) # y train
+```
 
-## What about top 500 
+
+## RandomForest 500 ASVs
+- Redo CLR transformation
 ```{r}
 lr_data[,1:502] -> lr_data_500
  
@@ -193,44 +216,59 @@ head(lr_clr_df_500)
 
 ```{r}
 set.seed(123)
-BAG_t_500 <- randomForest(lr_clr_df_500$Clade ~ . ,
+BAG_t_500 <- randomForest(lr_clr_df_500$Clade ~ . , # clade is factor
                      data = lr_clr_df_500[,-c(1,2)])
 
 BAG_t_500
-```
 
-- The error rate increased again higher. 
-
-```{r}
 ```
 
 
+- The error rate increased again higher. The default for ntree = 500 and it fit best with 500; therefore, increase ntree to 1000 to see if there can be a lower OOB error rate. 
+
 ```{r}
+set.seed(123)
+BAG_t_500_2 <- randomForest(lr_clr_df_500$Clade ~ . , # clade is factor
+                     data = lr_clr_df_500[,-c(1,2)], 
+                     ntree = 1000)
+
+BAG_t_500_2
 ```
-
-
 ```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
+base::plot(BAG_t_500_2)
 ```
 
 
 ```{r}
+############################## optimal number of trees
+(BAG_t_500_2$err.rate |> as.data.frame())$OOB |> which.min() # 986 trees
 ```
 
+# Training & Testing Split
+```{r}
+############################## find optimal mtry
+set.seed(3)
+# training set
+Z_500 <- sample(nrow(lr_clr_df_500), .85*nrow(lr_clr_df_500)) # same as ridge/lasso 85 %
+tuneRF(lr_clr_df_500[Z_500,-c(1,2)], 
+       lr_clr_df_500[Z_500,]$Clade, mtryStart = 2) 
+```
+ 
+ # Re-run 500 with Optimal ntree and mtry
 
 ```{r}
+set.seed(123)
+BAG_500_o <- randomForest(Clade ~ . , # clade is already a factor
+                     data = lr_clr_df_500[,-c(1)], 
+                     mtry = 2, # from above tuning 
+                     ntree = 986) # from above
+
+BAG_500_o
 ```
 
 
 
-
+# Overall Error Rates 1000, 500:
 
 
 

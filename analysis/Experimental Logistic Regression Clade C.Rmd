@@ -1,5 +1,5 @@
 ---
-title: "Experimental Logistic Regression for Clade C"
+title: "Balanced Data Creation for Clade C vs Non-Clade C & Experimental Logistic Regression for Clade C"
 author: "Cassandra Sperow"
 date: "2023-11-04"
 output: html_document
@@ -45,6 +45,14 @@ unique(balanced_df$Clade)
 
 length(balanced_df$Clade=="C")
 length(balanced_df$Clade != "C")
+
+sum(balanced_df$Clade == "D" ) # 2
+sum(balanced_df$Clade == "G" ) # 1
+```
+
+```{r}
+# save the balanced df for later use if needed
+write_csv(balanced_df, "../output/balanced_df.csv")
 ```
 
 

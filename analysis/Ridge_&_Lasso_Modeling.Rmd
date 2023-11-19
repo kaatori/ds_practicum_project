@@ -58,7 +58,7 @@ bind_cols(lr_data_1000[,1:2], # sample id and Clade columns
 head(lr_clr_df_1000)
 ```
 
-# Training and Testing Split
+# Training and Testing Split - 85 % Training
 
 ```{r}
 set.seed(1234)
@@ -127,7 +127,7 @@ RR <- glmnet(x_train[,-1], # take out intercept
 
 ### RR Plot
 ```{r}
-plot(RR, 
+base::plot(RR, 
      ylim = c(-0.5, 0.5),
      label = TRUE
      )
@@ -150,12 +150,12 @@ rr_cv
 
 
 ```{r}
-plot(rr_cv) 
+base::plot(rr_cv) 
 ```
 
 
 
-#### Best Ridge Model 1000 from Training & Re-fit
+#### Best Ridge Model 1000 from Training & Cross-Validation
 ```{r}
 
 # Refit the model with the selected lambda
@@ -196,12 +196,17 @@ predict(best_RR_1000,
 ```{r}
 # error rate
 mean((as.numeric(yhat) - y_test)^2) -> ridge_1000_error
+ridge_1000_error
 
 # confusion matrix
 table(yhat, y_test) 
 
 # correct classification rate
-(16 + 19)/sum(16, 19, 7) # 42 testing rows
+paste("Correct Classification Rate: ", round((13 + 16)/42, 2  ))# 42 testing rows
+
+# Error Rate
+#paste("Error Rate: ", round( (13/42), 3))
+paste("Error rate: ", round(ridge_1000_error, 2))
 
 ```
 - Testing Error Rate for the ridge model with 1000 ASVs is 16.7 %.  
@@ -258,7 +263,7 @@ RR_500 <- glmnet(x = x_train_500[,-1], # take out intercept
                  alpha = 0,  # RIDGE
                  family = "binomial") # do not need type = class here
 
-plot(RR_500)
+base::plot(RR_500)
 ```
 
 #### Cross-Validation
@@ -273,7 +278,7 @@ rr_500_cv
 ```
 
 ```{r}
-plot(rr_500_cv)
+base::plot(rr_500_cv)
 ```
 
 ### Ridge 500 Best Model & Refit
@@ -309,10 +314,14 @@ predict(best_RR_500,
 
 ```{r}
 mean((as.numeric(yhat_500) - y_test_500)^2) -> ridge_500_error
+paste("Error rate: ", round(ridge_500_error, 2))
 
+paste("Confusion Matrix: ")
 table(yhat_500, y_test_500)
 
-(15 + 15)/ sum(15, 8, 15, 4)
+paste("Correct Classification Rate: ", 
+round(((15 + 15)/ 42), 2)
+)
 ```
 
 - Error rate for using 500 ASVs is 28.6 %
@@ -320,8 +329,11 @@ table(yhat_500, y_test_500)
 
 
 # Lasso 1000
-
+- Using same 1000 column dataframe as Ridge 1000 section above
 ```{r}
+dim(x_train) # includes intercept
+length(y_train) # 139 clade C = 1, 139 not clade C = 0
+
 # Train the LASSO model
 lasso <- glmnet(x_train[,-1], # take out intercept
              y_train, 
@@ -329,7 +341,7 @@ lasso <- glmnet(x_train[,-1], # take out intercept
              family = "binomial")
 
 
-plot(lasso, 
+base::plot(lasso, 
      xlim = c(0, 5),
      ylim = c(-0.2, 0.2)
      )
@@ -346,11 +358,11 @@ lasso_cv <- cv.glmnet(x_train[,-1],
                    )
 lasso_cv
 
-plot(lasso_cv)
+base::plot(lasso_cv)
 ```
 
 - lambda.min has a lower error rate of 36.4 %
-
+- lambda.min has 73 Non-Zero Coefficients out of 1000 ASVs
 
 
 ```{r}
@@ -368,7 +380,7 @@ best_lasso_1000 <- glmnet(x_train[,-1], # take out intercept bc it will fit anot
 
 
 ```{r}
-dim(x_test)
+dim(x_test) # includes intercept
 
 dim(lr_test) # 42 x 1002
 
@@ -387,13 +399,22 @@ predict(best_lasso_1000,
 ```
 ```{r}
 mean((as.numeric(yhat) - y_test) ^2) -> lasso_1000_error
+paste("Error rate: ", lasso_1000_error)
+
+paste("Confusion Matrix: ")
+table(yhat, y_test)
+
+paste("Correct Classification Rate: ",  
+      round((14+11)/42, 2)
+      )
 ```
 
 - Testing error rate for lasso model with 1000 ASVs is 40.5 %
+- Correct classification rate is about 60 %
 
 
 # Lasso 500
-
+- Use previously created 500 dataframe with it's above CLR transformation
 ```{r}
 # Create a formula for model.matrix using 500
 formula <- as.formula(paste("Clade ~ .", sep = "", collapse = ""), 
@@ -420,7 +441,7 @@ lasso_500 <- glmnet(x = x_train_500[,-1], # take out intercept
                  alpha = 1,  # Lasso
                  family = "binomial") # do not need type = class here
 
-plot(lasso_500)
+base::plot(lasso_500)
 ```
 
 
@@ -439,10 +460,10 @@ lasso_500_cv
 - lambda.min has the lower misclassification rate in training of 34.3 %
 
 ```{r}
-plot(lasso_500_cv)
+base::plot(lasso_500_cv)
 ```
 
-#### Best Lasso Model from Training & Re-fit
+#### Best Lasso Model from Training & Cross-Validation
 
 ```{r}
 # Refit the model with the selected lambda
@@ -473,11 +494,15 @@ predict(best_lasso_500,
 ```
 
 ```{r}
+paste("Error rate: ")
 mean((as.numeric(yhat_500) - y_test_500)^2) -> lasso_500_error
+round(lasso_500_error, 2)
 
+paste("Confustion Matrix: ")
 table(yhat_500, y_test_500)
 
-(11 + 16)/ length(y_test_500)
+paste("Correct Classification Rate: ")
+round((11 + 16)/ 42, 2)
 ```
 
 - Testing Error rate for the lasso model with 500 ASVs is 35.7 %.
@@ -497,12 +522,14 @@ data.frame(
   lasso_1000_error,
   lasso_500_error)
   ) %>% 
-  arrange(-error_rates)
+  arrange(error_rates)
 ```
 
-- The ridge classificiation model with 500 ASVs has the lowest error rate at 28.6 % but not by much since the one with 1000 ASVs. 
+- The ridge classificiation model with 500 ASVs has the lowest error rate at 28.6 %. 
+- Correct Classification Rate: 71.4 %
 
-- The lower lasso error rate is the lasso model with 500 ASVs. 
+- The lasso classification model with 500 ASVs has the lower of the two lasso models at 35.7 %. 
+- Correct Classification Rate of the Lower Lasso Model: 64.3 %. 
 
 # ASV Coefficients by Best Ridge Model for Clade C Prediction
 ```{r}
