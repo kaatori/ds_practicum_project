@@ -209,9 +209,8 @@ paste("Correct Classification Rate: ", round((13 + 16)/42, 2  ))# 42 testing row
 paste("Error rate: ", round(ridge_1000_error, 2))
 
 ```
-- Testing Error Rate for the ridge model with 1000 ASVs is 16.7 %.  
-- Correct Classification Rate: 83.3 %
-- This model predicted that 7 rows are Clade C when they were not in the testing data. 
+
+
 
 
 # Ridge 500 
@@ -266,7 +265,7 @@ RR_500 <- glmnet(x = x_train_500[,-1], # take out intercept
 base::plot(RR_500)
 ```
 
-#### Cross-Validation
+#### Cross-Validation with training data
 ```{r}
 set.seed(1234)
 rr_500_cv <- cv.glmnet(x = x_train_500[,-1], # take out intercept
@@ -326,6 +325,7 @@ round(((15 + 15)/ 42), 2)
 
 - Error rate for using 500 ASVs is 28.6 %
 - Correct Classification Rate is 71.4 %
+
 
 
 # Lasso 1000
@@ -543,13 +543,21 @@ data.frame(
 coef(best_RR_500, s = "lambda.min") %>% 
   as.matrix() %>% 
   as.data.frame() %>% 
+  mutate(row_names = rownames(.)) %>% 
+  select(row_names, s1) %>% # reorder
   filter(s1 != 0) %>% 
   mutate(abs_coef = abs(s1)) %>% 
-  arrange(-abs_coef)
+  arrange(-abs_coef) -> ridge_500_coef_df
+
+ridge_500_coef_df
+  
+
+write_csv(ridge_500_coef_df, "../output/ridge_500_coef_df.csv")
+
 ```
 
 
-# ASVs Selected by Best Lasso Model for Clade C Prediction
+# ASV Coefficients by Best Lasso Model for Clade C Prediction
 
 ```{r}
 # coef(best_lasso_1000, s = "lambda.min") %>% 
@@ -562,9 +570,21 @@ coef(best_RR_500, s = "lambda.min") %>%
 coef(best_lasso_500, s = "lambda.min") %>% 
   as.matrix() %>% 
   as.data.frame() %>% 
+  mutate(row_names = rownames(.)) %>% 
+  select(row_names, s1) %>% # reorder
   filter(s1 != 0) %>% 
   mutate(abs_coef = abs(s1)) %>% 
-  arrange(-abs_coef)
+  arrange(-abs_coef) -> lasso_500_coef_df
+
+lasso_500_coef_df
+
+write_csv(lasso_500_coef_df, "../output/lasso_500_coef_df.csv")
 ```
 
 - The best lasso method with 500 possible ASV predictors selected the above ASVs as the 'best' predictors. 
+
+```{r}
+
+```
+
+

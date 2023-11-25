@@ -1,0 +1,118 @@
+---
+title: "Jacard Index for K-Means Clustering Consistency"
+author: "Cassandra Sperow"
+date: "2023-11-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Testing Jacard Index 
+
+```{r}
+# Sample cluster assignments for three runs
+set.seed(123)  # For reproducibility
+cluster_run1 <- kmeans(mtcars, centers = 3, nstart = 1)$cluster
+cluster_run2 <- kmeans(mtcars, centers = 3, nstart = 1)$cluster
+cluster_run3 <- kmeans(mtcars, centers = 3, nstart = 1)$cluster
+
+```
+
+
+```{r}
+# Function to calculate Jaccard index
+jaccard_index <- function(cluster1, cluster2) {
+  intersection <- length(intersect(cluster1, cluster2))
+  union <- length(union(cluster1, cluster2))
+  return(intersection / union)
+}
+
+# Calculate Jaccard index for each pair of runs
+jaccard_12 <- jaccard_index(cluster_run1, cluster_run2)
+jaccard_13 <- jaccard_index(cluster_run1, cluster_run3)
+jaccard_23 <- jaccard_index(cluster_run2, cluster_run3)
+
+cat("Jaccard Index (Run 1 vs Run 2):", jaccard_12, "\n")
+cat("Jaccard Index (Run 1 vs Run 3):", jaccard_13, "\n")
+cat("Jaccard Index (Run 2 vs Run 3):", jaccard_23, "\n")
+
+```
+
+
+# Jacard Index for Bacteria ASV K-Means Clustering Seed Experiments
+- See also Rmd files with 'Coseq' in title for the individual runs of K-means per species. 
+
+## Read in Cluster Assignments
+- Cluster assignments were found in the 'coseq' files for each species. 
+- 3 random runs per species were used to see if the clustering assignments and groups would be the same, and if so, how much the same or different? 
+```{r}
+# import the cluster assignments that were saved from the previous 'coseq' files
+read_csv("../output/species_S_cluster_assignments.csv") -> clusters_S
+read_csv("../output/species_P_cluster_assignments.csv") -> clusters_P
+
+```
+
+# Species S 
+```{r}
+# save into simple variables
+clusters_S$seed23_run2 -> s1
+clusters_S$seed105_run3 -> s2
+clusters_S$seed12_run4 -> s3
+```
+
+
+```{r}
+# Function to calculate Jaccard index
+jaccard_index <- function(cluster1, cluster2) {
+  intersection <- length(intersect(cluster1, cluster2))
+  union <- length(union(cluster1, cluster2))
+  return(intersection / union)
+}
+
+# Calculate Jaccard index for each pair of runs
+jaccard_12 <- jaccard_index(s1, s2)
+jaccard_13 <- jaccard_index(s1, s3)
+jaccard_23 <- jaccard_index(s2, s3)
+
+cat("Jaccard Index (Run 1 vs Run 2):", jaccard_12, "\n")
+cat("Jaccard Index (Run 1 vs Run 3):", jaccard_13, "\n")
+cat("Jaccard Index (Run 2 vs Run 3):", jaccard_23, "\n")
+```
+
+- The Jacard calcuations indicate that the cluster assignments for runs 2 and 3 are more similar than the other run. This makes sense as there were two runs that had a similar number of K clusters, which were runs 2 and 3 where the K clusters were 8 and 7, respectively. The other run found K=13 clusters, which is indicated by the Jacard Index value of 0.471 and 0.412, respectively, for 1 vs 2 and 1 vs. 3. 
+
+# Species P
+```{r}
+clusters_P$seed23_run2 -> p1
+clusters_P$seed105_run3 -> p2
+clusters_P$seed12_run4 -> p3
+```
+
+
+```{r}
+# Function to calculate Jaccard index
+jaccard_index <- function(cluster1, cluster2) {
+  intersection <- length(intersect(cluster1, cluster2))
+  union <- length(union(cluster1, cluster2))
+  return(intersection / union)
+}
+
+# Calculate Jaccard index for each pair of runs
+jaccard_12 <- jaccard_index(p1, p2)
+jaccard_13 <- jaccard_index(p1, p3)
+jaccard_23 <- jaccard_index(p2, p3)
+
+cat("Jaccard Index (Run 1 vs Run 2):", jaccard_12, "\n")
+cat("Jaccard Index (Run 1 vs Run 3):", jaccard_13, "\n")
+cat("Jaccard Index (Run 2 vs Run 3):", jaccard_23, "\n")
+```
+
+- Species P resulted in very consistent clustering indicated by the Jaccard Index values above. 
+- Species S has less consistent clustering results also indicated by the Jaccard Index values above for Species S. 
+
+```{r}
+```
+

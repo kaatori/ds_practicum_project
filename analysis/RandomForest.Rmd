@@ -162,7 +162,7 @@ head(lr_data)
 ### RandomForest 1000 ASVs
 
 - CLR transformation recommended by client and used also in Ridge/Lasso Modeling
-- To compare with Ridge/Lasso Modeling, these are the same along with 85 % training data.
+- To compare with Ridge/Lasso Modeling, these are the same along with 85 % training data and the format of the data frame.
 ```{r}
 library(compositions)
 lr_data[,1:1002] -> lr_data_1000
@@ -180,7 +180,7 @@ head(lr_clr_df_1000)
 library(randomForest)
 set.seed(123)
 BAG_t_1000 <- randomForest(lr_clr_df_1000$Clade ~ . , # clade is factor
-                     data = lr_clr_df_1000[,-c(1)], # minus sample id
+                     data = lr_clr_df_1000[,-c(1,2)], # minus sample id and clade
                      )
 
 BAG_t_1000
@@ -190,6 +190,7 @@ base::plot(BAG_t_1000)
 (BAG_t_1000$err.rate |> as.data.frame())$OOB |> which.min() # 464
 ```
 
+# Tune RF with Training & Testing Split for 1000
 ```{r}
 ############################## find optimal mtry
 set.seed(3)
@@ -198,6 +199,18 @@ Z_1000 <- sample(nrow(lr_clr_df_1000), .85*nrow(lr_clr_df_1000)) # same % as las
 tuneRF(lr_clr_df_1000[Z_1000,-c(1,2)], # x train minus sample id and clade columns
        lr_clr_df_1000[Z_1000,]$Clade, mtryStart = 2) # y train
 ```
+
+## Re-fit 1000 with optimal ntree and mtry
+```{r}
+set.seed(123)
+BAG_1000_o <- randomForest(lr_clr_df_1000$Clade ~ . , # clade is already a factor
+                     data = lr_clr_df_1000[,-c(1,2)], # minus sample id and clade
+                     mtry = 2, # from above tuning 
+                     ntree = 464) # from above
+
+BAG_1000_o
+```
+
 
 
 ## RandomForest 500 ASVs
@@ -244,7 +257,7 @@ base::plot(BAG_t_500_2)
 (BAG_t_500_2$err.rate |> as.data.frame())$OOB |> which.min() # 986 trees
 ```
 
-# Training & Testing Split
+# Tune RF with Training & Testing Split 500 
 ```{r}
 ############################## find optimal mtry
 set.seed(3)
@@ -254,7 +267,7 @@ tuneRF(lr_clr_df_500[Z_500,-c(1,2)],
        lr_clr_df_500[Z_500,]$Clade, mtryStart = 2) 
 ```
  
- # Re-run 500 with Optimal ntree and mtry
+### Re-run 500 with Optimal ntree and mtry
 
 ```{r}
 set.seed(123)
@@ -268,9 +281,118 @@ BAG_500_o
 
 
 
-# Overall Error Rates 1000, 500:
+# Overall RandomForest Error Rates 1000, 500:
+
+```{r}
+BAG_500_o
+BAG_1000_o
+```
 
 
+- Both optimized RandomForest models resulted in a 37 % error rate with the 'mtry' set at 2 variables. This may be due to the necessity of leaving the two species together, similar to K-means at times finding 2 clusters before the split of the data into separate species. Recall that the Clade C observations were n = 139, and they were kept together to increase the number of rows of data for modeling Clade C despite species. 
+
+- Also of note is that the individual class error rates for class 0 are worse than a coin toss (65-66 % errors). 
+
+- RandomForest modeling was chosen as an experiment to see if its non-parametric nature would model these data better than Ridge or Lasso classification. Ridge and Lasso have better error rates than RandomForest under the above seeds. 
+
+- Future research would attempt to increase the number of clade C observations in one species at a time with other non-clade C observations of equal number. Clade C was the 2nd most dominant Clade in the overall data. Clade A was the majority in terms of number of observations. See other analysis files in this directory, such as species split and files with 'EDA' in the titles. 
 
 
+# Boosted Trees
+```{r}
+library(gbm)
+```
+
+# Boosted 1000
+```{r}
+# gbm needs integer not factor
+lr_clr_df_1000 %>% 
+  mutate(Clade = as.integer(Clade)-1) -> boost_data
+
+
+set.seed(123)
+boost_model_1000 <- gbm(boost_data[Z_1000,]$Clade ~ . , 
+              data = boost_data[Z_1000, -c(1)], 
+              n.trees = 5000, 
+              distribution = "bernoulli") # logistic classification
+boost_model_1000
+summary(boost_model_1000)
+
+```
+
+```{r}
+
+pred_test_1000 = predict.gbm(object = boost_model_1000,
+                   newdata = boost_data[-Z_1000, -c(1)], # 42 rows of testing 
+                   n.trees = 500,           # 500 tress to be built
+                   type = "response")
+
+pred_test_1000 # probabilities for bernoulli
+
+
+```
+
+```{r}
+# classes from above probabilities
+as.data.frame(pred_test_1000) %>% 
+  mutate(actual_class = boost_data[-Z_1000, ]$Clade) %>% # y_train
+  mutate(pred_class = ifelse(pred_test_1000 > 0.5, 1, 0)) -> pred_df
+
+paste("Confusion Matrix Boosted Trees Model: ")
+table(pred_df$actual_class, 
+      pred_df$pred_class)
+
+
+paste("Correct Classification Rate, Boosted Trees:  ")
+((16+12)/42)*100
+```
+
+# Boosted 500
+
+```{r}
+# gbm needs integer not factor
+lr_clr_df_500 %>% 
+  mutate(Clade = as.integer(Clade)-1) -> boost_data_500
+
+
+set.seed(123)
+boost_model_500 <- gbm(boost_data_500[Z_500,]$Clade ~ . , 
+              data = boost_data_500[Z_500, -c(1)], 
+              n.trees = 5000, 
+              distribution = "bernoulli") # logistic classification
+boost_model_500
+summary(boost_model_500)
+
+```
+
+```{r}
+
+pred_test_500 = predict.gbm(object = boost_model_500,
+                   newdata = boost_data_500[-Z_500, -c(1)], # 42 rows of testing 
+                   n.trees = 500,           # 500 tress to be built
+                   type = "response")
+
+pred_test_500 # probabilities for bernoulli
+
+
+```
+
+```{r}
+# classes from above probabilities
+as.data.frame(pred_test_500) %>% 
+  mutate(actual_class = boost_data[-Z_500, ]$Clade) %>% # y_train
+  mutate(pred_class = ifelse(pred_test_500 > 0.5, 1, 0)) -> pred_500_df
+
+paste("Confusion Matrix Boosted Trees Model: ")
+table(pred_500_df$actual_class, 
+      pred_500_df$pred_class)
+
+
+paste("Correct Classification Rate, 500 ASVs, Boosted Trees:  ")
+((16+9)/42)*100
+
+paste("Error rate for Boosted 500 ASV model: ", 
+      round(1 - ((16+9)/42), 3)
+      )
+```
 
