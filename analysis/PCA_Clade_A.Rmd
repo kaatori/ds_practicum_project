@@ -1,0 +1,152 @@
+---
+title: "PCA - Clade A"
+author: "Cassandra Sperow"
+date: "2023-11-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
+```
+
+## Principal Components Analysis for Clade A
+- Need to find the bacteria in order of those that explain the most variance for Clade A, and then do subsets of first 1000, 500. 
+```{r, import-data-subset-A}
+# read in data for clades A and C for Data 642 project
+read_csv("../output/AC_df.csv") -> ac_df #  5889 ASVs
+
+# section out clade A only
+ac_df %>% 
+  filter(Clade == "A") -> adf # clade A df
+```
+
+
+```{r, sum-to-zero}
+# make sure no columns sum to 0
+adf %>% 
+  select(starts_with("ASV")) %>% 
+  map(., ~sum(.)) %>% 
+  as.data.frame() %>% 
+  pivot_longer(cols = everything()) %>% 
+  filter(value == 0) %>% 
+### take these out of clade A df before PCA as they will cause an error
+  select(name) %>% as_vector() -> zero_summed_clade_a
+
+zero_summed_clade_a
+
+adf %>% 
+  select(-c(zero_summed_clade_a)) %>% 
+  select(starts_with("ASV")) %>% 
+  compositions::clr() %>% 
+  as.data.frame() -> clr_asvs_clade_a
+```
+
+
+```{r, pca}
+stats::prcomp(clr_asvs_clade_a, 
+              scale. = T) -> pca_clade_a
+```
+
+
+```{r}
+library(factoextra)
+fviz_contrib(pca_clade_a, 
+             choice = "var", 
+             axes = 1, 
+             top = 20, 
+             title = "Clade A Top 20 Contributing ASVs in Dimension 1", 
+             ggtheme = theme_minimal()) -> PCA_Clade_A_Top_20
+
+PCA_Clade_A_Top_20
+```
+
+
+```{r}
+fviz_contrib(pca_clade_a, 
+             choice = "var", 
+             axes = 1, 
+             top = 400, 
+             title = "Clade A Top Contributing ASVs in Dimension 1\nRed dashed line indicates average contribution", 
+             xtickslab.rt = 0,
+             #ylim(0.4, 0.7),
+             ggtheme = theme_minimal())
+```
+- This is very different than Clade C. Clade C had a plateau of about 130-150 or so ASVs that contributed much more than the rest. 
+- See the Rmd file for PCA_CLR that has other PCA analysis for CLade C towards the end of the file. 
+
+```{r}
+fviz_pca_biplot(pca_clade_a, 
+                label = "var", 
+                addEllipses=TRUE, 
+                select.var = list(contrib = 5), 
+                repel = T, 
+                title = "Clade A - PCA Biplot"
+                )
+```
+
+
+```{r}
+fviz_pca_var(pca_clade_a, 
+             col.var="contrib", 
+             alpha.var="contrib", 
+             select.var = list(contrib = 5), 
+             repel = T,
+             title = "Clade A Variables - PCA"
+             ) 
+```
+```{r}
+# Access the loadings of the first two principal components
+loadings <- pca_clade_a$rotation[, 1:2]
+
+# Display the loadings to see which variables contribute the most to PC1 and PC2
+#loadings
+
+# access ordered asv names for binding columns
+names(clr_asvs_clade_a) -> asv_names
+
+# Take the absolute values of the loadings
+abs(loadings) %>% 
+  as.data.frame()  -> abs_loadings
+
+# need the above in particular format for map function
+map(abs_loadings, ~abs(.)) %>% 
+  as.data.frame() %>% 
+  bind_cols("ASV" = asv_names, 
+            .) %>% 
+  arrange(-PC1) %>% 
+  select(ASV) -> clade_a_pca_Ranks
+```
+
+
+```{r}
+write_csv(clade_a_pca_Ranks, "../output/clade_a_pca_Ranks.csv")
+```
+
+# Subset PCA Ranked Variables for Clade A Dataset
+```{r}
+dim(adf) # clade A only
+dim(ac_df) # Clades A and C together
+
+# using df with both clades to be used later for classification for clade a = 1, clade c = 0
+ac_df %>% 
+  select(1:8, c(clade_a_pca_Ranks$ASV[1:1000])) %>% 
+  # take out ITS2 type bc it is how to determine the clade
+  # take out Majority bc it is also how clade is determined
+  # take out reef bc it is not unique/specific enough on its own
+  select(-ITS2_type, -Majority, -reef) -> pca_ranked_clades_AC_df
+```
+
+
+```{r}
+#write_csv()
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
