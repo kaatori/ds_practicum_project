@@ -394,6 +394,32 @@ library(compositions)</code></pre>
 <pre><code>## [1] &quot;rmult&quot;</code></pre>
 <pre class="r"><code>clr_bac %&gt;% as.data.frame() -&gt; clr_bac_df</code></pre>
 <pre class="r"><code>write_csv(clr_bac_df, &quot;../output/clr_bac_df.csv&quot;) # no sample column</code></pre>
+<div id="clade-c-subset" class="section level3">
+<h3>Clade C Subset</h3>
+<pre class="r"><code>read_csv(&quot;../output/rev_coral_join.csv&quot;) %&gt;% 
+  filter(Clade == &quot;C&quot;) -&gt; clade_c_data</code></pre>
+<pre><code>## Rows: 778 Columns: 5897
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr    (6): Clade, Majority, sample_id, species, region, reef
+## dbl (5891): ITS2_type, its2_count, ASV0001, ASV0002, ASV0003, ASV0004, ASV00...
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code># subset ASV columns for clr()
+select(clade_c_data, starts_with(&quot;ASV&quot;)) -&gt; clade_c_asvs</code></pre>
+<pre class="r"><code>library(compositions)
+clr(clade_c_asvs) %&gt;% 
+  as.data.frame() -&gt; clr_clade_c</code></pre>
+<pre class="r"><code># check if any columns sum to 0
+map(clr_clade_c, ~sum(.==0)) %&gt;% 
+  as.data.frame() %&gt;% 
+  pivot_longer(cols = everything()) %&gt;% 
+  filter(value == 0)</code></pre>
+<pre><code>## # A tibble: 0 × 2
+## # ℹ 2 variables: name &lt;chr&gt;, value &lt;int&gt;</code></pre>
+<pre class="r"><code>write_csv(clr_clade_c, &quot;../output/clr_clade_c.csv&quot;)</code></pre>
+</div>
 </div>
 
 

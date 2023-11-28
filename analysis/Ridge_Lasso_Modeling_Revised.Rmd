@@ -10,8 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 suppressMessages(library(tidyverse))
 ```
 
-#### Note: Revised to make sure to use ```cv.glmnet()``` with K-fold cross-validation when fitting the ridge and lasso models
-#### The modeling that includes other variables with the ASVs returns better error rates. This section starts with the heading 'Other variables'
+#### Note: **Revised** to make sure to use ```cv.glmnet()``` with K-fold cross-validation when fitting the ridge and lasso models
+#### The modeling that includes **other variables** with the ASVs returns **better error rates. This section starts with the heading 'Other variables'**. Feel free to skip to that section.
 
 # Review Goal & Question(s)
 - Can Clade C bacteria be modeled using classification algorithms?
@@ -19,11 +19,11 @@ suppressMessages(library(tidyverse))
 
 # Import Logistic Regression Balanced Dataset
 - Clade C: n=139
-- Non-Clade C: n=139
+- Non-Clade C: n=139 (mostly Clade A)
 - Use first 1000 ASVs obtained in PCA Dim.1
-- The ```lr_data.csv``` dataset was created by subsetting the Clade C observations from the original 659 samples with random sampling from non-Clade C rows to obtain an equal number of observations for each response label of Clade C = 1, Non-Clade C = 0. This data subsetting process was obtained in the original modeling exploration file 'Logistic Regression Clade C.Rmd'. 
+- The ```lr_data.csv``` dataset was created by subsetting the Clade C observations from the original 659 samples with random sampling from non-Clade C rows to obtain an equal number of observations for each response label of Clade C = 1, Non-Clade C = 0. This data subsetting process was obtained in the original modeling exploration file 'Experimental Logistic Regression Clade C.Rmd'. 
 - The Clade C Principal Components Analysis results from dimension 1 were obtained in the file 'PCA-CLR.Rmd'.
-- The ASV data are transformed for modeling with the centered log ratio of the raw abundance counts. This is redone when subsetting for the PCA 1000 results and again when subsetting the first 500 PCA results. 
+- The ASV data are transformed for modeling with the centered log ratio of the raw abundance counts. This is redone when subsetting for the PCA 1000 results and again when subsetting the first 500 PCA results, and again for the first 200 given that the ratios are dependent. 
 
 ```{r}
 # read in balanced Clade C and non-Clade C observations 
@@ -32,13 +32,11 @@ read_csv( "../output/lr_data.csv") -> lr_data
 # read in saved PCA ranks for Dimension 1
 read_csv("../output/clade_c_pca_Ranks.csv") -> clade_c_pca_Ranks
 
-
-  
 ```
 
 ```{r}
 # order the Clade C ASVs by selecting from the vector of PCA results
-# this is for subsetting the first 1000 or 500 in order of their PCA rank
+# this is for subsetting the first 1000, 500, 200 in order of their PCA rank
 lr_data %>% 
   select(sample_id, Clade, (clade_c_pca_Ranks$ASV)) %>% 
   select(1:1002) -> lr_data_1000
@@ -46,7 +44,7 @@ lr_data %>%
 dim(lr_data_1000)
 ```
 
-- Note that Clade as the Y response is a double as glmnet expects a numeric 0/1 for classifciation.
+- Note that Clade as the Y response is a double as glmnet expects a numeric 0/1 for classification.
 ```{r}
 #glimpse(lr_data)
 head(lr_data_1000)
@@ -72,9 +70,7 @@ head(lr_clr_df_1000)
 
 # Ridge 1000 
 
-#### Training & CV 1000
-
-- ```glmnet``` documentation:
+ ```glmnet``` documentation:
 
 https://glmnet.stanford.edu/articles/glmnet.html
 
@@ -109,12 +105,12 @@ RidgeCV_1000 <- cv.glmnet(X[,-1], # take out intercept
              )
 ```
 
-### RR Plot
+### Ridge 1000 CV Plot
 ```{r}
 base::plot(RidgeCV_1000)
 ```
 
--  Access the error rate
+-  Access the error rates for lambdas
 ```{r}
 RidgeCV_1000
 #min(RidgeCV_1000$cvm) # from lambda.min 
@@ -127,7 +123,7 @@ coef(RidgeCV_1000, s = "lambda.min") %>%
   as.matrix() %>% 
   as.data.frame() %>% 
   # order in terms of magnitude although beware ridge uses bias constraint
-  # the magnitude should be interpreted in terms of the coef that were not shrunk as fast to 0
+  # the magnitude should be interpreted in terms of the coef that were NOT shrunk as fast to approach 0
   arrange(-abs(s1)) %>% 
   head()
 ```
@@ -183,7 +179,7 @@ length(y)
 ```
 
 
-#### Training & CV 500
+#### Ridge CV 500
 ```{r}
 set.seed(42)
 # Train the RIDGE model with 500 ASVs
@@ -237,7 +233,7 @@ dim(X)
 y <- lr_clr_200$Clade
 length(y)
 
-##################################### Training and CV for 200 ASVs
+##################################### CV for 200 ASVs
 set.seed(23)
 RidgeCV_200 <- cv.glmnet(X[,-1], # take out intercept
                  y, 
@@ -257,16 +253,17 @@ RidgeCV_200
 
 - Is the error rate going up because maybe fewer ASVs make the data even more sparse?
 
-- It does not seem to be helping to redo with cv.glmnet when the error rate is going up. 
+- It does not seem to be helping to redo with cv.glmnet when the error rate is going up. What if non-ASV variables are included? Would the error rates go down? 
 
 
 # Other Variables
-- Including other variables from original data to see if it can give better error rate
+- Including other variables from original data to see if it can give better error rates
+- This is the section mentioned at the very beginning where the reader may use as a starting point to review revsied results.
 ```{r redo-data-set}
-# read in balanced df for clade C with other variables such as region and ITS2 count from algae of Clade C
+# read in data with other variables 
 read_csv("../output/balanced_df.csv") %>% 
   # take out reef because it is not specific
-  # take out Majority because it is used to define Clade C - as well as ITS2 Type
+  # take out Majority because it is used to define Clade C - as well as ITS2 Type - which is subcategory of clade
   select(-reef, -Majority, -ITS2_type) -> balanced_w_other_vars
 
 # make dataset for 1000 ASVs 
@@ -317,7 +314,7 @@ write_csv(clr_200, "../output/clr_200.csv")
 
 ```
 
-# 1000
+# Ridge 1000
 ```{r}
 # design matrix
 library(glmnet)
@@ -356,7 +353,7 @@ coef(R_clr_1000, s = "lambda.min") %>%
   head()
 ```
 
-# 500
+# Ridge 500
 ```{r}
 # Create a formula for model.matrix
 formula <- as.formula(paste("Clade ~ .", sep = "", collapse = ""), 
@@ -393,7 +390,7 @@ coef(R_clr_500, s = "lambda.min") %>%
   head()
 ```
 
-# 200 
+# Ridge 200 
 ```{r}
 # Create a formula for model.matrix
 formula <- as.formula(paste("Clade ~ .", sep = "", collapse = ""), 
@@ -533,7 +530,8 @@ L_clr_200 <- cv.glmnet(X[,-1], # take out intercept
              type.measure = "class", # misclassification error
              nfolds = 10,
              family = "binomial", 
-             # maxit = 10^7 ##### this is needed because of a warning message where it ran out before doing 100 lambda values
+             maxit = 10^7.5 ##### this is needed because of a warning message where it ran out before doing 100 lambda values
+             ## increasing it several times over the default still did not give the full 100 lambda values, but 96 out of 100. 
              )
 
 # call
@@ -550,6 +548,8 @@ coef(L_clr_200, s = "lambda.min") %>%
   arrange(-abs(s1)) %>% 
   head()
 ```
+- The lambda.min index is 37. The warning message is for not getting to go through the default of 100 lambda values. Looking at the plot of lambda values, glmnet is reporting the min at index 37, and the 1se at index 3. These low index values and the fact that the plot indicates the variance starts to increase again gives the impression that this warning message might be ok, at least for the short term. If these same variables need to be used to build a model, other optimization methods would be necessary to ensure convergence to the best minimum. 
+
 
 # Overall Rates for Models with Other Variables
 
@@ -575,7 +575,7 @@ L_clr_200
 map(list_lasso_models, ~min(.$cvm)) %>% 
   as_vector() -> lasso_error_rates
 
-model_names <- c("ridge 1000", "ridge 500", "ridge 200", "lasso 1000", "lasso 500", "lasso 200")
+model_names <- c("ridge 1000", "ridge 500", "ridge 200", "lasso 1000", "lasso 500", "lasso 200*")
 
 # combine to have them all in ore place for comparison
 cbind(
@@ -583,15 +583,20 @@ cbind(
 c(ridge_error_rates, lasso_error_rates)
 ) %>% 
   as.data.frame() %>% 
-  mutate(error_rates = V2) %>% 
-  mutate(error_rates = as.numeric(error_rates)) %>% 
-  arrange(error_rates)
+ # mutate(error_rates = V2) %>% 
+  mutate(error_rates_pct = as.numeric(V2)*100, .keep = "unused") %>% 
+  arrange(error_rates_pct) %>% 
+  mutate(row_id = row_number())
 
 ```
 
-- The models with other variables perform better overall. The lowest error rate obtained in the first 'Ridge & Lasso Modeling.Rmd' file was 29 %. Here there are several models with error rates around 15-16 %, a dramatic improvement. 
+- The models with other variables perform better overall. The lowest error rate obtained in the first 'Ridge & Lasso Modeling.Rmd' file was 29 %; however, including the non-ASV variables of species, algae count (ITS2_count), and region provide a drastic improvement. Several revised models with error rates around 15-16 % were obtained in the latter modeling section of 'Other Variables'. 
 
-- For the variables that were selected from the lasso model with the lowest error rate, the recommendation would be to see if this makes biologic sense for the client as the subject matter expert, for example, if she is familiar with any of the ASVs that come up as predictors. 
+- For the variables that were selected from the lasso model with the lowest error rate, the recommendation would be to see if the variables selected make biologic sense for the client as the subject matter expert, for example, if the client is familiar with any of the ASVs that were selected as predictors. These are listed below for all of the lasso models with other variables included because each of them had an error rate very similar.
+
+If the objective later is to use any of these models in production or research for predictions, the recommendation would be to use the less complex ridge method with 200 ASVs with other variables included. Also the lasso method with 1000 ASV variables with other variables of species, region, and ITS2_count) could be considered, although normally it's best to go with fewer predictors when the error rates are so close (as in this case between lasso 1000 and ridge 200). It's less computationally expensive and provides better interpretability.
+
+* The asterisk by the lasso 200 model is due to the fact that a warning message appeared relating to iterating over 96/100 lambda values. This model was re-attempted with increasing the max iterations to give more time for convergence; however, this was not successful. As this model came in 3rd overall for error rates in this analysis, it is recommended to consider the first two models mentioned above. 
 
 ```{r}
 L_clr_1000
@@ -613,11 +618,15 @@ map(list_lasso_models, ~coef(., s = "lambda.min") %>% as.matrix(.) %>%
 #   filter(s1 != 0) %>% 
 #   arrange(-abs(s1))
 
-lasso_coefs
+print('Lasso 1000 predictors arranged by absolute value of coefficient:')
+lasso_coefs[1]
 ```
 
 ```{r}
+# write all 3 model results to file
 write_rds(lasso_coefs, "../output/lasso_coefs.rds")
+
+
 ```
 
 ### Region MAQ in all of Lasso Variable Selections
@@ -630,4 +639,25 @@ clr_200 %>%
   arrange(-n)
 ```
 
+```{r}
+R_clr_1000
+R_clr_500
+R_clr_200
 
+map(list_ridge_models, ~coef(., s = "lambda.min") %>% as.matrix(.) %>% 
+      as.data.frame() %>% 
+      mutate(predictor = rownames(.)) %>% 
+  filter(s1 != 0) %>% 
+  arrange(-abs(s1))) -> ridge_coefs
+
+print('Ridge 200 predictors arranged by absolute value of coefficient:')
+ridge_coefs[3]
+
+# write to file for ridge models as well
+write_rds(ridge_coefs, "../output/ridge_coefs.rds")
+```
+
+Conclusion: 
+- The ridge model with 200 ASVs has less complexity with a comparable error rate in this analysis. 
+
+- The 

@@ -1,5 +1,5 @@
 ---
-title: "Logistic Regression for Clade C"
+title: "Logistic Regression for Clade C Testing"
 author: "Cassandra Sperow"
 date: "2023-11-04"
 output: html_document

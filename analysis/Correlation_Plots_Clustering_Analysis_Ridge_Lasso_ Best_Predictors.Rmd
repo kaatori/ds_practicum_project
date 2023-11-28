@@ -1,0 +1,616 @@
+---
+title: "Correlation Plots & Clustering Analysis with Ridge & Lasso Predictors"
+author: "Cassandra Sperow"
+date: "2023-11-12"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
+```
+
+
+- Note: The first several correlation plots relate to exploratory data analysis while other sections towards the end relate to post-modeling analysis with the predictors from 2 rounds of Ridge, Lasso, and tree methods modeling (See Rmd files with Ridge, Lasso, and/or tree methods in title). The Ridge & Lasso Modeling Revised.Rmd file is the final results of modeling Clade C vs. non-Clade C. 
+
+# Clade C
+
+```{r}
+read_csv("../output/lr_data.csv") %>% 
+  mutate(Clade = as.factor(Clade)) -> lr_data
+
+head(lr_data)
+```
+
+# Correlation Matrix - Clade C - All
+```{r}
+cor_matrix_lr_data <- cor(lr_data[,-c(1,2)]) # 3226
+
+```
+
+
+## Correlation Matrix - Top 20
+```{r}
+
+
+
+cor_matrix_lr_data[1:20,1:20]
+```
+
+```{r}
+png(filename = "../plots/top20_corr_clade_c.png",
+    width = 1200, height = 800)
+
+library(corrplot)
+top20_corr_clade_c <- corrplot(cor_matrix_lr_data[1:20, 1:20], 
+                               method = "circle")
+
+```
+
+
+
+## Correlation Matrix - Top 50
+- Anything over 50 gets small and hard to read
+```{r}
+png(filename = "../plots/top50_corr_clade_c.png",
+    width = 1200, height = 800)
+
+library(corrplot)
+top50_corr_clade_c <- corrplot(cor_matrix_lr_data[1:50, 1:50], 
+                               method = "circle")
+
+```
+
+- preliminary
+```{r}
+# read in taxonomy table to see which bacterium this is
+read_delim("../data/Files/16S_tax.txt") -> bac_tax
+
+# one of the earlier experimental models had ASV0013 kept as predictor
+bac_tax %>% 
+  filter(ASV == "ASV0013") %>% 
+  pivot_longer(cols = everything())
+```
+
+- preliminary
+```{r}
+#plot(log(lr_data$ASV0013), lr_data$Clade)
+
+ggplot(lr_data, aes( y = log(ASV0013), color = as.factor(Clade), fill = as.factor(Clade))) +
+  geom_histogram() +
+  coord_flip() +
+  facet_wrap(~Clade) +
+  xlab("Log of ASV0013 Counts") +
+  ylab("")
+```
+
+# Correlation Plot - Both Species - All Data
+```{r}
+read_csv("../output/rev_coral_join.csv") -> rev_coral_join
+```
+
+
+```{r}
+# correlation matrix
+corr_matrix_all <- cor(rev_coral_join[,-c(1:8)])
+
+corr_matrix_all[1:20,1:20]
+
+# save the png
+png(filename = "../plots/corr_plot_top_20.png",
+    width = 1200, height = 900)
+
+# correlation plot
+library(corrplot)
+corr_plot_top_20 <- corrplot(corr_matrix_all[1:20, 1:20], 
+                               method = "circle", 
+                             )
+
+#corr_plot_top_20
+```
+
+
+```{r}
+# save the png
+png(filename = "../plots/corr_plot_top_100.png",
+    width = 1200, height = 900)
+
+# correlation plot
+library(corrplot)
+corr_plot_top_100 <- corrplot(corr_matrix_all[1:100, 1:100], 
+                               method = "circle", 
+                              )
+#corr_plot_top_100
+```
+
+
+```{r}
+# save the png
+png(filename = "../plots/corr_plot_top_50.png",
+    width = 1200, height = 900)
+
+# correlation plot
+library(corrplot)
+corr_plot_top_50 <- corrplot(corr_matrix_all[1:50, 1:50], 
+                               method = "circle", 
+                              )
+
+corr_plot_top_50
+```
+
+----Ridge modeling coefficients for 'best' model - first round of modeling - not final
+- Reader is advised to skip to section below of: **Revised/Final Modeling Results**
+
+- See the below section for the final results for Ridge 200 in 2nd (final) round of modeling with lower error rates
+```{r}
+read_csv("../output/ridge_500_coef_df.csv") -> ridge_results
+```
+
+```{r}
+ridge_results
+```
+-Where are these ASVs in relation to one another? - See revised final models below 
+
+```{r}
+cor_matrix_lr_data %>% # data used in clade C modeling
+  as.data.frame() %>% 
+  mutate(ASV = rownames(.), .before = ASV1236) %>% 
+ # filter(ASV %in% c(ridge_results$row_names)) %>% 
+  filter(ASV %in% c("ASV6296"	,	"ASV4003"	,"ASV8219"	,	"ASV4449"	) )
+  
+```
+- They are uncorrelated, and ridge would have chosen these because of this.
+
+---Lasso modeling selection - round 1 - not final
+```{r}
+read_csv("../output/lasso_500_coef_df.csv") -> lasso_results
+
+lasso_results
+
+cor_matrix_lr_data %>% # data used in clade C modeling
+  as.data.frame() %>% 
+  mutate(ASV = rownames(.), .before = ASV1236) %>% 
+  filter(ASV %in% c("ASV0675"	,	"ASV0013"	,	"ASV0958"	,	"ASV0485"))
+```
+--Were these clustered consistently in the k-means runs?
+```{r, read-in-cluster-assignments}
+read_csv("../output/species_P_cluster_assignments.csv") -> clusters_P
+read_csv("../output/species_S_cluster_assignments.csv") -> clusters_S
+
+```
+
+```{r}
+dim(clusters_P)
+dim(clusters_S)
+dim(ridge_results)
+```
+
+```{r}
+ridge_results %>% 
+  left_join(clusters_P, join_by("row_names" == "ASV"))
+
+
+# what is biggest group?
+ridge_results %>% 
+  left_join(clusters_P, join_by("row_names" == "ASV")) %>% # cluster 3 under seed23_run2
+  group_by(seed12_run4) %>% 
+  summarise(n = n()) %>% # cluster 3 in seed 23just happens to be largest group
+  arrange(-n) # cluster 1 in seed 12 - same though with jaccard index
+```
+
+- The ridge results above joined with the clustering results for species P indicate that the first several ASVs with the highest absolute value coefficient in ridge modeling were clustered together consistently in predominantly 3 out of 3 random runs. 
+
+- What does the same thing look like for species S?
+```{r}
+ridge_results %>% 
+  left_join(clusters_S, join_by("row_names" == "ASV"))
+
+
+ridge_results %>% 
+  left_join(clusters_S, join_by("row_names" == "ASV")) %>% # cluster 10 under seed23_run2
+  group_by(seed12_run4) %>% 
+  summarise(n = n()) %>% # cluster 10 in seeed 23
+  arrange(-n) # cluster 6 in seed 12 but same cluster
+```
+
+- Yes, the ASVs that the ridge model has as its highest absolute value are clustered pretty consistently across 3 out of 3 random runs of K-means. See Coseq_S and Coseq_P files in analysis folder for the k-means runs per species. 
+
+# **Revised/Final Modeling Results**
+- Skip to Recommendation below
+- The above was from the first rounds of modeling efforts that never got better than around a 30 % error rate. 
+- This section uses the revised (final) modeling results where the 'best' model found on these data is the Ridge 200 with 200 ASV predictors using also other non-ASV predictors.
+- See Ridge and Lasso Modeling Revised.Rmd in analysis folder. 
+
+```{r}
+readRDS("../output/lasso_coefs.rds") -> lasso_coefs
+readRDS("../output/ridge_coefs.rds") -> ridge_coefs
+```
+
+```{r, eda-0}
+
+lasso_coefs[3] %>%  #%>% #
+  as.data.frame() %>%
+  # exclude other variables except bacteria
+  filter(str_detect(predictor, "ASV")) %>%
+  # order by largest magnitude
+  arrange(-abs(s1)) %>%
+  select(predictor) %>%
+  as_vector() -> lasso_1000_best_asvs
+  
+```
+
+```{r, eda-1}
+dim(cor_matrix_lr_data) # all Clade C 3226
+cor_matrix_lr_data %>% # data used in clade C modeling
+  as.data.frame() %>% 
+  mutate(ASV = rownames(.), .before = ASV1236) %>% 
+ # match the asv above
+  filter(ASV %in% c( lasso_1000_best_asvs))
+```
+
+
+### Join Predictors with Cluster Assignments & Review Consistency of Cluster Assignments
+
+```{r, eda-2}
+lasso_coefs[3] %>% # lasso 1000
+  as.data.frame() %>% 
+  filter(str_detect(predictor, "ASV")) %>% 
+  left_join(clusters_P, join_by("predictor" == "ASV")) %>% 
+  head
+
+
+
+
+lasso_coefs[3]  %>% # lasso 1000
+  as.data.frame() %>% 
+  filter(str_detect(predictor, "ASV")) %>% 
+  left_join(clusters_S, join_by("predictor" == "ASV")) %>% 
+  head
+```
+
+
+
+### Join Predictors with Cluster Assignments for Largest Cluster
+- Use Seed 12 because it had highest Jaccard Index
+```{r, eda-3}
+lasso_coefs[3] %>% # lasso 1000
+  as.data.frame() %>% 
+  filter(str_detect(predictor, "ASV")) %>% 
+  left_join(clusters_P, join_by("predictor" == "ASV")) %>% 
+  group_by(seed12_run4) %>% 
+  summarise(n = n()) %>% # mostly cluster 3
+  arrange(-n)
+
+
+
+
+lasso_coefs[3]  %>% 
+  as.data.frame() %>% 
+  filter(str_detect(predictor, "ASV")) %>% 
+  left_join(clusters_S, join_by("predictor" == "ASV")) %>% 
+  group_by(seed12_run4) %>% 
+  summarise(n = n()) %>% # mostly cluster 10
+  arrange(-n)
+```
+
+
+# Read in Bacteria Taxonomy
+```{r, bac-taxonomy}
+read_delim("../data/Files/16S_tax.txt") -> bac_tax
+```
+
+# Join Predictors with Cluster Assignments & Taxonomy to Review 
+- Cluster runs with K-means were completed by species
+- See also 'coseq' files in analysis folder
+- Recommended model is Ridge 200; therefore, lasso 1000 plots are commented out.
+
+# Ridge 200 - **Recommended Model Overall**
+- comparable low error rate relative to all other modeling methods
+- higher interpretability with keeping predictors (unlike Lasso)
+- less complex
+- less expensive computationally
+
+```{r, joins-ridge-200}
+################### combine ridge 200 predictors with cluster assignments and taxonomy
+# species P
+ridge_coefs[3] %>% # Ridge 200
+  as.data.frame() %>% 
+  filter(str_detect(predictor, "ASV")) %>% 
+  left_join(clusters_P, join_by("predictor" == "ASV")) %>% 
+  left_join(bac_tax, join_by("predictor" == "ASV")) %>% 
+  group_by(Family, Genus) %>%  # 16 groups
+  ungroup() %>% 
+  mutate(coral_species = "P") -> predictors_p_df
+
+# species S
+ridge_coefs[3]  %>% 
+  as.data.frame() %>% 
+  filter(str_detect(predictor, "ASV")) %>% 
+  left_join(clusters_S, join_by("predictor" == "ASV")) %>% 
+  left_join(bac_tax, join_by("predictor" == "ASV")) %>% 
+  group_by(Family, Genus) %>%  # 16 groups
+  ungroup() %>% 
+  mutate(coral_species = "S") -> predictors_s_df
+
+# combine
+bind_rows(
+predictors_p_df, 
+predictors_s_df) -> predictors_clade_c_ridge # genus or family are best per client.
+
+
+predictors_clade_c_ridge %>% # 400 because the k-means was done for each species separately
+  arrange(-abs(s1)) # in order of coefficient absolute value: high to low
+```
+
+- The interpretation of the coefficients from a ridge model with a bias term is that the magnitude above the approach to 0 may indicate greater influence over the outcome of Clade C or not Clade C. 
+
+
+
+```{r, plots-ridge-200}
+
+# predictor cluster assignments from ridge 200
+# facet wrap for coral species
+predictors_clade_c_ridge %>% 
+  ggplot(aes(x = seed12_run4, fill = Family)) +
+  geom_histogram(stat = 'count', show.legend = FALSE) +
+  viridis::scale_fill_viridis(discrete = T) +
+  theme_bw() +
+  xlab("Cluster Assignment in Seed 12 K-Means") + 
+  ggtitle("Cluster Assignnments of Ridge 200 Predictors with Taxonomy: Family") +
+  facet_wrap(~paste("Species ", coral_species)) 
+# facet wrap for coral species
+predictors_clade_c_ridge %>% 
+  ggplot(aes(x = seed12_run4, fill = Genus)) +
+  geom_histogram(stat = 'count', show.legend = FALSE) +
+  viridis::scale_fill_viridis(discrete = T) +
+  theme_bw() +
+  xlab("Cluster Assignment in Seed 12 K-Means") + 
+  ggtitle("Cluster Assignnments of Ridge 200 Predictors with Taxonomy: Genus") +
+  facet_wrap(~paste("Species ", coral_species)) 
+
+
+
+################### NO facet wrap - BOTH species together
+predictors_clade_c_ridge %>% 
+  ggplot(aes(x = seed12_run4, fill = Family)) +
+  geom_histogram(stat = 'count', 
+                 #show.legend = FALSE
+                 ) +
+  viridis::scale_fill_viridis(discrete = T) +
+  theme_bw() +
+  xlab("Cluster Assignment in Seed 12 K-Means") + 
+  ggtitle("Cluster Assignnments of Ridge 200 Predictors with Taxonomy: Family") +
+  theme(legend.key=element_blank(), legend.key.size=unit(5,"point")) -> plot_ridge_200_family
+  #guides(colour=guide_legend(nrow=10)) 
+  
+
+ggsave(filename = "../plots/plot_ridge_200_family.png",
+       plot = plot_ridge_200_family, 
+       device = "png",
+       width = 17,
+       height = 11,
+       units = "in",
+       )
+
+################### facet wrap for species
+predictors_clade_c_ridge %>% 
+  ggplot(aes(x = seed12_run4, fill = Family)) +
+  geom_histogram(stat = 'count', 
+                 show.legend = FALSE
+                 ) +
+  viridis::scale_fill_viridis(discrete = T) +
+  theme_bw() +
+  xlab("Cluster Assignment in Seed 12 K-Means") + 
+  ggtitle("Cluster Assignnments of Ridge 200 Predictors with Taxonomy: Family") +
+  theme(legend.key=element_blank(), legend.key.size=unit(5,"point")) +
+  facet_wrap(~paste("Species ", coral_species)) 
+
+
+# 
+# predictors_clade_c_ridge %>% 
+#   ggplot(aes(x = seed23_run2, fill = Genus)) +
+#   geom_histogram(stat = 'count', show.legend = FALSE) +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 23 K-Means") + 
+#   ggtitle("Cluster Assignnments of Ridge 200 Predictors with Taxonomy: Genus") 
+
+###################  facet wrap 
+predictors_clade_c_ridge %>% 
+  ggplot(aes(x = seed12_run4, fill = Order)) +
+  geom_histogram(stat = 'count', 
+                 #show.legend = FALSE
+                 ) +
+  viridis::scale_fill_viridis(discrete = T) +
+  theme_bw() +
+  xlab("Cluster Assignment in Seed 12 K-Means") + 
+  ggtitle("Cluster Assignnments of Ridge 200 Predictors with Taxonomy: Order") +
+  theme(legend.key=element_blank(), legend.key.size=unit(5,"point")) +
+  guides(colour=guide_legend(nrow=30)) +
+  facet_wrap(~paste("Species ", coral_species)) 
+```
+
+
+
+**Observations of Ridge 200 ASVs with Cluster Assignments:**
+
+- Clustering is very consistent across runs (see also Jaccard Index calculation in 'Jaccard.Rmd'.)
+- Most of the predictors are in one majority cluster assignment, e.g. first 7 are always together. 
+- What does this look like in terms of Family, Genus and other taxonomy?
+- Client would like to use Genus level and Family level plots in final report. 
+- Recommendation is to use the Ridge 200 model because it keeps the ASVs as client would need for interpretation. Lasso cancels out most ASVs by setting them equal to 0. 
+
+
+
+```{r, lasso-joins}
+# species P
+lasso_coefs[3] %>% # lasso 1000
+  as.data.frame() %>% 
+  filter(str_detect(predictor, "ASV")) %>% 
+  left_join(clusters_P, join_by("predictor" == "ASV")) %>% 
+  left_join(bac_tax, join_by("predictor" == "ASV")) %>% 
+  group_by(Family, Genus) %>%  # 16 groups
+  ungroup() %>% 
+  mutate(coral_species = "P") -> predictors_p_df
+
+
+# species S
+lasso_coefs[3]  %>% 
+  as.data.frame() %>% 
+  filter(str_detect(predictor, "ASV")) %>% 
+  left_join(clusters_S, join_by("predictor" == "ASV")) %>% 
+  left_join(bac_tax, join_by("predictor" == "ASV")) %>% 
+  group_by(Family, Genus) %>%  # 16 groups
+  ungroup() %>% 
+  mutate(coral_species = "S") -> predictors_s_df
+
+
+# combine
+bind_rows(
+predictors_p_df, 
+predictors_s_df) -> predictors_clade_c_lasso # genus or family are best per client.
+
+```
+
+
+```{r, plots-lasso-positive-negative}
+predictors_clade_c_lasso %>% 
+  arrange(-s1) %>% # highest positive to lowest negative magnitude
+# how many are positive coefficients?
+  filter(s1 > 0) -> positive_lasso
+
+# positive_lasso
+# 
+# # begin plots for positive coefficients
+# positive_lasso %>% 
+#   ggplot(aes(x = seed12_run4, fill = Family)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") + 
+#   ggtitle("Cluster Assignnments of Lasso 1000 \nPositively Associated Predictors with Taxonomy") +
+#   facet_wrap(~paste("Species ", coral_species)) 
+# 
+# positive_lasso %>% 
+#   ggplot(aes(x = seed12_run4, fill = Genus)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") + 
+#   ggtitle("Cluster Assignnments of Lasso 1000 \nPositively Associated Predictors with Taxonomy") +
+#   facet_wrap(~paste("Species ", coral_species)) 
+#   
+# 
+# 
+# 
+# predictors_clade_c_lasso %>% 
+#   arrange(-s1) %>% # highest positive to lowest negative magnitude
+# # how many are positive coefficients?
+#   filter(s1 < 0) -> negative_lasso
+# 
+# # begin plots for neg associated predictors
+# negative_lasso %>% 
+#   ggplot(aes(x = seed12_run4, fill = Genus)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") + 
+#   ggtitle("Cluster Assignnments of Lasso 1000 \nNegatively Associated Predictors with Taxonomy") +
+#   facet_wrap(~paste("Species ", coral_species)) 
+# 
+# negative_lasso %>% 
+#   ggplot(aes(x = seed12_run4, fill = Family)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") + 
+#   ggtitle("Cluster Assignnments of Lasso 1000 \nNegatively Associated Predictors with Taxonomy") +
+#   facet_wrap(~paste("Species ", coral_species)) 
+
+
+```
+
+```{r, plots-lasso-1000}
+# 
+# predictors_clade_c_lasso %>% 
+#   ggplot(aes(x = seed12_run4, fill = Phylum)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") + 
+#   ggtitle("Cluster Assignnments of Lasso 1000 Selected Predictors with Taxonomy") +
+#   facet_wrap(~paste("Species ", coral_species)) 
+# 
+# predictors_clade_c_lasso %>% 
+#   ggplot(aes(x = seed12_run4, fill = Class)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") + 
+#   ggtitle("Cluster Assignnments of Lasso 1000 Selected Predictors with Taxonomy") +
+#   facet_wrap(~paste("Species ", coral_species)) 
+# 
+# predictors_clade_c_lasso %>% 
+#   ggplot(aes(x = seed12_run4, fill = Order)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") + 
+#   ggtitle("Cluster Assignnments of Lasso 1000 Selected Predictors with Taxonomy") +
+#   facet_wrap(~paste("Species ", coral_species)) 
+# 
+# predictors_clade_c_lasso %>% 
+#   ggplot(aes(x = seed12_run4, fill = Family)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") + 
+#   ggtitle("Cluster Assignnments of Lasso 1000 Selected Predictors with Taxonomy") +
+#   facet_wrap(~paste("Species ", coral_species)) 
+# 
+# predictors_clade_c_lasso %>% 
+#   ggplot(aes(x = seed12_run4, fill = Genus)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") + 
+#   ggtitle("Cluster Assignnments of Lasso 1000 Selected Predictors with Taxonomy") +
+#   facet_wrap(~paste("Species ", coral_species)) 
+# 
+# #do not use - most do not have species
+# predictors_clade_c_lasso %>%
+#   ggplot(aes(x = seed12_run4, fill = Species)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") +
+#   ggtitle("Cluster Assignnments of Lasso 1000 Selected Predictors with Taxonomy") +
+#   facet_wrap(~paste("Species ", coral_species))
+# 
+# 
+# # 
+# # ggsave(plot = plot_family, "../plots/plot_family.png", 
+# #        width = 12)
+# # 
+# # gridExtra::grid.arrange(plot_phylum, plot_class,plot_order ,plot_family, plot_genus, ncol = 3) -> five_plots
+# # 
+# # # Save the combined plots to a PDF file using ggsave
+# # ggsave("../plots/five_plots.pdf", five_plots, width = 17, height = 11, device = "pdf")
+# 
+# 
+# predictors_clade_c_lasso %>% 
+#   ggplot(aes(x = seed12_run4, fill = Family)) +
+#   geom_histogram(stat = 'count') +
+#   viridis::scale_fill_viridis(discrete = T) +
+#   theme_bw() +
+#   xlab("Cluster Assignment in Seed 12 K-Means") + 
+#   ggtitle("Cluster Assignnments of Lasso 1000 Selected Predictors with Taxonomy") 
+```
+
+
+
+
+
+

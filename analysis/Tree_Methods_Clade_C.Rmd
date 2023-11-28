@@ -1,5 +1,5 @@
 ---
-title: "RandomForest"
+title: "RandomForest & Boosted Tree Methods Modeling for CLade C"
 author: "Cassandra Sperow"
 date: "2023-11-09"
 output: html_document
