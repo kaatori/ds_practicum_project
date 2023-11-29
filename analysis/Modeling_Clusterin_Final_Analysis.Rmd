@@ -138,7 +138,7 @@ predictors_clade_c_ridge %>%
   viridis::scale_fill_viridis(discrete = T) +
   theme_bw() +
   xlab("Cluster Assignment in Seed 12 K-Means") + 
-  ggtitle("Cluster Assignnments of Ridge 200 Predictors with Taxonomy: Order") +
+  ggtitle("Cluster Assignnments of Ridge 200 Predictors with Taxonomy: Order") + 
   theme(legend.key=element_blank(), legend.key.size=unit(5,"point")) +
   guides(colour=guide_legend(nrow=30)) +
   facet_wrap(~paste("Species ", coral_species)) 
