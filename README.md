@@ -6,6 +6,12 @@ This project explores the application of machine learning methods for analyzing 
 
 Note: Some function calls take a very long time to run, namely the K-means clustering in the files referencing "coseq". 
 
+Note: Some additional work for a different course (Data 642) is included as the client permitted the use of the coral data for projects in both courses. The goals of each course's projects are different. 
+
+In Data 793 (main directory with ```analysis``` folder  ```.Rmd``` files) contains work related to K-means clustering and binary classification of Clade C vs not Clade C. This project is in R. 
+
+The Data 642 work contains a separate sub-directory (```data_642_jupyter_notebooks```) where the project is in Python with Jupyter Notebooks associated with modeling binary classification for Clade A v. Clade C. Clade A is the most dominant clade of the coral data, and as such, the underlying dataset used is different to allow for the max number of samples that contain Clade A sequencing. 
+
 
 # R Version
 
