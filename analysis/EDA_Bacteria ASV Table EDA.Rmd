@@ -1,0 +1,488 @@
+---
+title: "Bacteria ASV Table"
+author: "Cassandra Sperow"
+date: "2023-09-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
+setwd("/Users/kasan/AU My Drive/001__DATA_793/R_dir_Corals_")
+```
+
+
+# Bacteria (ASV Table)
+
+```{r}
+read_delim("../data/Files/ASV_table") -> bacteria
+
+dim(bacteria) #  659 by 33173
+
+head(bacteria)
+```
+
+```{r}
+tail(bacteria)
+```
+
+# Bacteria Taxonomy Table
+```{r}
+read_delim("../data/Files/16S_tax.txt") -> bacteria_tax
+
+dim(bacteria_tax)
+```
+
+
+
+```{r}
+names(bacteria_tax)
+```
+
+### How many bacterial species? 
+
+- 226 but most ASVs have NA as species. For this analysis, the focus is on the ASV as the bacteria strain, but it's good to see how many are not ID'd to a specific species
+```{r}
+bacteria_tax %>% 
+  group_by(Species) %>% 
+  summarise(n = n()) %>% 
+  arrange(-n)
+```
+
+- NA for species is 32904:
+```{r}
+33173 - 32904
+```
+- Only 269 of the 33,173 ASVs have been ID'd with a species, otherwise the genera is the next step up in taxonomy. 
+
+### How many different genera? 1,390 with 16,482 having NA as Genus
+
+```{r}  
+bacteria_tax %>% 
+  group_by(Genus) %>%
+  summarise(n = n()) %>%
+  arrange(-n) 
+```
+
+- Since there are still NAs for Genus, are there NAs for Family? Yes, there are 5115 NAs for Family
+- Other than the NAs, there are 482 bacteria Family names
+
+```{r}
+bacteria_tax %>% 
+  group_by(Family) %>%
+  summarise(n = n()) %>%
+  arrange(-n) 
+```
+
+## What about Order? 
+- Are there any NAs? No, this is good. 
+- Order is the level with no NA or None values, such that if the analysis was done on this higher level, none of the outputs or clusters would be NA or None, depending on what level is needed from Dr. Cárdenas. 
+- There are 308 Orders without any NA values
+```{r}
+bacteria_tax %>% 
+  group_by(Order) %>% 
+  summarise(n = n()) %>% 
+  arrange(-n)
+
+
+bacteria_tax %>% 
+  filter(Order=="Flavobacteriales")
+```
+
+
+```{r}
+bacteria %>% 
+  rename(sample_id = `...1`) -> bacteria
+```
+
+## Distribution Plots for Bacteria ASV EDA
+```{r}
+# take one ASV to be explored
+#bacteria$ASV0001
+
+# overview stats of ASV0001 counts (abundance)
+summary(bacteria$ASV0001)
+
+# how many rows are 0?
+sum(bacteria$ASV0001==0) /nrow(bacteria) # 199 out of 659 samples = 30.2 % are 0 values
+
+plot(bacteria$ASV0001)
+```
+
+- The published work from March 2023 (insert link) has the below vizualization with a focus on the top 20 bacterial strains in order of abundance. The ASV numbers indicate the top 20 such that ASV001 - ASC0020 are the ones pictured in the Admixture analysis. 
+
+#### Figure:  Admixture Analysis from Buitrago-López and Cárdenas, et al (2023)
+
+Citation: 
+
+DOI: 10.1111/mec.16871 
+
+![Figure 2 from the publication at DOI: 10.1111/mec.16871 ](../images/Buitrago_Cardenas_at_al_Admixture.png)
+
+
+
+```{r}
+# obtain top 20 names per the March publication
+top_20_asv <- names(bacteria[2:21]) %>% as_vector()
+
+# map through the top 20 ASVs to see quick plots
+bacteria %>% 
+  # only need Top 20 to see quick distribution of each
+  select(top_20_asv) %>% 
+  map(., ~plot(.))
+
+# obtain more substantial "at-a-glance" plots for ASVs 1-10 to view correlations
+bacteria %>% 
+  # only need Top 20 to see quick distribution of each
+  select(top_20_asv[1:10]) %>% 
+  GGally::ggpairs() -> ggpairs_top_10_asv
+
+# obtain more substantial "at-a-glance" plots for ASVs 11-20 to view correlations
+bacteria %>% 
+  # only need Top 20 to see quick distribution of each
+  select(top_20_asv[11:20]) %>% 
+  GGally::ggpairs() -> ggpairs_top_11_20_asv
+```
+
+- Save the plots generated above to view as larger plot images
+```{r}
+ggsave("ggpairs_top_10_asv.png", ggpairs_top_10_asv, device = "png", path = "../plots")
+
+
+ggsave("ggpairs_top_11_20_asv.png", ggpairs_top_11_20_asv, device = "png", path = "../plots")
+```
+
+
+
+
+# How many different bacteria are there per sample?
+- Taking one random sample ID and pivoting ASV columns to see the counts in their own column
+- Created a temporary view for this sample ID of how many unique  ASVs there are. 
+- Performed this after the pivot by creating a new column with "T" if the ASV count == 0, otherwise "F" 
+- Grouped by T/F to see the count of T=zero / F=non-zero because the non-zero values indicate the unique number of ASVs for this sample
+```{r}
+# for one random sample id: 
+bacteria %>% 
+  filter(sample_id=="PDOG-R1-1") %>% 
+  pivot_longer(cols = starts_with("ASV"), 
+               names_to = "ASV", 
+               values_to = "count_ASV") %>% 
+  # how many unique ASVs are there for this sample?
+  # need a 0 vs non-0 binary count column
+  mutate(zero = ifelse(count_ASV==0, "T", "F")) %>% 
+  # group by the new binary column to see how many ASVs this sample has that are non-0
+  group_by(zero) %>% 
+  summarise(n = n())
+
+```
+- For the sample PDOG-R1-1, there are 203 different bacteria strains linked to this sample, 32969 bacteria strains that were not found in this sample. (32969 + 203 = 33172)
+
+```{r}
+32969 + 203
+```
+
+## Extend the above method to the entire table to see which samples may have fewer than 3 bacteria strains in that sample in order to filter out some data for manageability. 
+```{r}
+bacteria %>% 
+  # begin pivot for all samples to switch ASV columns into one long column with its ASV name and its corresponding abundance counts all in one other column
+  # this will create a very long data frame but is needed to see the zero vs non-zero counts
+  pivot_longer(cols = starts_with("ASV"), 
+               names_to = "ASV", 
+               values_to = "count_ASV") %>% 
+  # creating new column for simple grouping
+  mutate(zero = ifelse(count_ASV==0, "T", "F")) %>% # 21,860,348 rows
+  # before had only pivoted for one sample but below will group by sample and zero or not
+  group_by(sample_id, zero) %>% 
+  summarise(n = n()) %>% # yes, 1,318 groups is 659 x 2 for T/F in each
+  # order by n to see which samples have the most T=zero counts
+  arrange(-n) -> unique_bacteria_counts_per_sample
+
+unique_bacteria_counts_per_sample %>% 
+  arrange(sample_id)
+  
+```
+- Many coral samples have at least 33K count values of 0 which means for example, coral sample id PKAU-R1-38 has 33158 ASVs of 0 count. This means 15 bacteria were found in this sample. 
+- vs
+- Sample id PWAJ-R1-33 has 174 ASV counts of greater than 0. This means that 33,173 - 174 = 32,999 bacteria were found in this sample. 
+
+#### **What should be threshold since the least amount of bacteria strains is 15 and the most is 32,999?**
+- It may be that the filtering is done on the side of the algae clade or that the client decides otherwise. 
+- How to show the distribution of zero vs non-zero values for ASV count?
+
+## Distributios
+- Simple plots of the ranges of unique ASV counts are hard to visualize because the scale is so vast from around 170 up to over 33K. 
+```{r}
+# simple base R plot
+plot(unique_bacteria_counts_per_sample$n)
+
+theme_set(theme_bw())
+unique_bacteria_counts_per_sample %>% 
+  ggplot(aes(x = n, fill = sample_id)) +
+  geom_histogram(show.legend = F)
+```
+
+- The above is not really telling me anything. I need to section out by T and F to see the distributions of ASV unique values
+
+```{r}
+unique_bacteria_counts_per_sample %>% 
+  filter(zero=="F") %>%  # F group means ASV count was greater than 0
+  ggplot(aes(x = n)) + 
+  geom_histogram(show.legend = F) +
+  ggtitle("Historgram Distribution of How Many Unique ASVs", "per Coral Sample ID")
+```
+
+- Observation:  Most of the coral samples have at least 45-50 different bacteria, and many have at least 75.
+
+```{r}
+
+unique_bacteria_counts_per_sample %>% 
+  ungroup() %>% 
+  filter(zero=="F") %>%  # F group means ASV count was greater than 0
+  # calculate mean of unique ASVs to have text on boxplot
+  mutate(mean_n = mean(n)) %>% 
+  ggplot(aes(x = n, y = zero)) + 
+  xlab("Unique ASVs per Sample ID") +
+  geom_boxplot(show.legend = F) +
+  stat_summary(fun.y=mean, geom="point", shape=20, size=5, color="red", fill="red") +
+  ggtitle("Boxplot Distribution of How Many Unique ASVs ", "Average per Coral Sample ID: 204") 
+  
+  
+```
+
+
+```{r}
+unique_bacteria_counts_per_sample %>% 
+  ungroup() %>% 
+  filter(zero=="F") %>% 
+  summary()
+```
+
+
+```{r}
+unique_bacteria_counts_per_sample %>% 
+  ungroup() %>% # grouping doesn't matter for graphing
+  filter(zero=="T") %>%  # T group means ASV count was 0
+  ggplot(aes(x = n)) + 
+  geom_histogram(show.legend = F) +
+  ggtitle("Historgram Distribution of How Many 0 Counts for ASV", "per Coral Sample ID")
+```
+
+
+```{r}
+unique_bacteria_counts_per_sample %>% 
+  ungroup() %>% 
+  filter(zero=="T") %>%  
+  mutate(mean_n = mean(n)) %>% 
+  ggplot(aes(x = n, y = zero)) + 
+  xlab("Count of 0 for ASV per Sample ID") +
+  geom_boxplot(show.legend = F) +
+  stat_summary(fun.y=mean, geom="point", shape=20, size=5, color="orange", fill="orange") +
+  ggtitle("Boxplot Distribution of How Many 0 Counts of ASV", "Average per Coral Sample ID: ______") 
+```
+
+
+```{r}
+unique_bacteria_counts_per_sample %>% 
+  ungroup() %>% 
+  filter(zero=="T") %>% 
+  summary()
+```
+
+## Bacteria ASV Correlations
+
+```{r}
+# read in data if starting from here later
+suppressMessages(library(tidyverse))
+
+read_delim("../data/Files/ASV_table") %>% 
+  rename(sample_id = `...1`) -> bacteria
+
+head(bacteria)
+
+```
+
+
+```{r}
+# perform summary stats without sample id column
+summary(bacteria[,-1]) -> summ_bac
+
+# what is data type of summary object?
+summ_bac %>% typeof() # character
+
+# what is length since columns are 33K?
+length(summ_bac)
+
+# showing first 20
+summ_bac[1:20]
+
+
+# convert summary character object to dataframe
+as.data.frame(summ_bac) -> summ_bac_df
+
+# what are the means and medians of each ASV count?
+# this is without taking out 0 counts
+summ_bac_df %>% 
+  group_by(Var2) %>% # yes 33,172 asvs
+  ungroup() %>% 
+  filter(str_detect(Freq, "Mean|Median"))
+```
+
+- Might need the correlations in a dataframe for later:
+```{r}
+bacteria %>%
+  # take out sample id column
+  select(-1) %>% 
+  cor() %>% 
+  as.data.frame -> cor_bacteria_df
+
+head(cor_bacteria_df)
+
+dim(cor_bacteria_df)
+```
+
+### Post-Meeting on Wednesday, Sept 27
+- If ASV column is not found in at least 3 samples, can take out because it might be device error from original sequencing
+- Therefore, if an ASV column has entries of some sort of count greater than 0 for at least 656 sample rows, keep. 
+- Need to pair down the ASVs somehow, at least a little bit
+- Above the method was to find T/F for the zero/non-zero values per sample but we don't want to take out samples. We need to take out ASVs if possible. 
+```{r}
+# read in data if starting from here later
+suppressMessages(library(tidyverse))
+
+read_delim("../data/Files/ASV_table") %>% 
+  rename(sample_id = `...1`) -> bacteria
+
+head(bacteria)
+```
+
+- To find the non-zero counts for each ASV column: 
+- Take a subset of dataframe to test. Since they are ordered according to abundance (ASV0001 was found the most and the last ASV was found the least), make a test dataframe to get the counts of zeros for each column, not for each sample id as was done above. 
+```{r}
+bacteria %>% 
+  select(sample_id, ASV0001, ASV33172) -> test_df
+
+sum(test_df$ASV33172==0) # 658 
+```
+- For ASV33172, the sum of its column where count==0 is 658, therefore, it was found in only 1 of the 659 samples. 
+
+```{r}
+bacteria %>% 
+  select(sample_id, ASV33172) %>% 
+  filter(ASV33172 != 0)
+```
+- ASV33172 is only found in sample SYAN-R4-9 with an abundance count of 8. Per Dr. Cárdenas, can take out this and similar ASVs. 
+
+- Next, need to do this for the other columns
+
+```{r}
+sum(test_df$ASV33172==0) # 658 
+
+map(bacteria[,-1], ~sum(.==0)) %>% as_tibble() %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "ASV_column", 
+               values_to = "sum_col_eq_0") %>% 
+  # cut off includes 656 or more because 659-656 = 3 
+  filter(sum_col_eq_0 >=656) -> ASV_cols_sum_eq_0
+
+ASV_cols_sum_eq_0
+```
+- We want to keep the cases where there are 656 zeros so we need greater than or equal to 657 for 2 samples and fewer. 
+```{r}
+###### if the cut off includes 657 or more because Dr. C said at least 3 samples
+map(bacteria[,-1], ~sum(.==0)) %>% as_tibble() %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "ASV_column", 
+               values_to = "sum_col_eq_0") %>% 
+  filter(sum_col_eq_0 >= 657) -> ASV_cols_sum_eq_0_657# because we want at least 3. 
+# 657 means that there were only two samples, so
+
+ASV_cols_sum_eq_0_657 # ASVs found in at least 3 samples
+```
+- There are 28,733 ASVs with at least 656 zero values for their columns. 
+
+- **There are 27,283 ASVs with at least 657 zero values for their columns.** 
+
+- Check the above counts of 0 values with a few ASV columns:
+
+```{r}
+sum(bacteria$ASV0212==0) # yes, 656  and only in 3 samples
+# what samples are ASV0212 found in? 
+bacteria %>% 
+  select(sample_id, ASV0212) %>% 
+  filter(ASV0212 !=0)
+
+sum(bacteria$ASV0864==0) # yes 657 and only in two samples
+# what samples are this one found in? 
+bacteria %>% 
+  select(sample_id, ASV0864) %>% 
+  filter(ASV0864 !=0)
+
+sum(bacteria$ASV11284==0) # yes, 658 and only for 1 sample
+# what samples are this one found in? 
+bacteria %>% 
+  select(sample_id, ASV11284) %>% 
+  filter(ASV11284 !=0)
+
+
+```
+- We wnat to keep the situations like ASV0212 where it was found in 3 samples. 
+- We can filter out the situtations like ASV0864 and ASV11284 where they were only found in two or fewer samples (ie 657 zeros or greater).
+- This means that the list of ASVs with 657 or more zeros in their respective columns may be filtered out of the original 33K. 
+- This amounts to 27,283 ASVs, and will be presented to Dr. Cárdenas as those to confirm should be filtered out. 
+- Save this list of 27,283 ASV column names for later: 
+```{r}
+ASV_cols_sum_eq_0_657$ASV_column -> list_ASV_657
+
+length(list_ASV_657) # 27,283 
+```
+
+- Use the above list to select only the ASVs needed (ie, not the ones in the above list): 
+```{r}
+bacteria %>% 
+  # using the simple vector with (-) sign was deprecated
+  # recommended method is to use all_of() but put (-) sign before it to NOT select those 27k ASVs
+  select(-all_of(list_ASV_657)) -> rev_bacteria
+
+dim(rev_bacteria) # 659 × 5,890
+
+rev_bacteria
+```
+- The new data frame has the complete set of original samples (659) with a paired down set of bacteria columns (5,890). 
+- Write to csv for reading in later for modeling:
+- We don't need to keep rewriting it so it is commented out. 
+```{r}
+#write_csv(rev_bacteria, "../output/rev_bacteria.csv")
+```
+
+- Quality Check:
+- The new data frame's columns should have no more than 656 zero values
+
+```{r}
+read_csv("../output/rev_bacteria.csv") -> rev_bacteria
+rev_bacteria[,-1] %>% 
+  # use map() again to count the number of times the column has 0
+  map(., ~sum(.==0)) %>% 
+  # convert into data frame for easier viewing
+  as.data.frame() %>% 
+  # transpose to get list of numbers in one column & convert to df
+  t() %>% as.data.frame() %>% 
+  # check max
+  summary(V1)
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+

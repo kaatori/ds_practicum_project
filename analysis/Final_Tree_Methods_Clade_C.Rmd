@@ -1,0 +1,286 @@
+---
+title: "RandomForest & Boosted Tree Methods Modeling for CLade C"
+author: "Cassandra Sperow"
+date: "2023-11-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library(tidyverse))
+```
+
+
+
+## Read in balanced datasets for 1000, 500, 200 and use same as in section 'Other Variables' in the file 'Ridge and Lasso Modeling 2.Rmd'.
+```{r}
+read_csv("../output/clr_1000.csv") -> clr_1000
+read_csv("../output/clr_500.csv") -> clr_500
+read_csv("../output/clr_200.csv") -> clr_200
+
+# tree methods need CLade as factor: 
+clr_1000$Clade <- as.factor(clr_1000$Clade)
+clr_500$Clade <- as.factor(clr_500$Clade)
+clr_200$Clade <- as.factor(clr_200$Clade)
+
+clr_1000$species <- as.factor(clr_1000$species)
+clr_500$species <- as.factor(clr_500$species)
+clr_200$species <- as.factor(clr_200$species)
+
+
+clr_1000$region <- as.factor(clr_1000$region)
+clr_500$region <- as.factor(clr_500$region)
+clr_200$region <- as.factor(clr_200$region)
+
+head(clr_1000)
+head(clr_500)
+head(clr_200)
+```
+
+
+```{r}
+library(randomForest)
+set.seed(123)
+BAG_t <- randomForest(Clade ~ . ,
+                     data = clr_1000[,-c(2)])
+
+BAG_t
+```
+
+```{r}
+base::plot(BAG_t)
+```
+
+
+```{r}
+BAG_t$err.rate[which.min(BAG_t$err.rate)]
+```
+
+
+```{r}
+############################## optimal number of trees
+(BAG_t$err.rate |> as.data.frame())$OOB |> which.min() #   trees
+```
+
+
+```{r}
+############################## find optimal mtry
+set.seed(3)
+# training set
+Zt <- sample(nrow(clr_1000), .85*nrow(clr_1000)) # 236 rows is 85 %
+
+tuneRF(clr_1000[Zt,-c(1:2)], # minus Clade and sample ID
+       clr_1000[Zt,]$Clade, 
+       mtryStart = 2) # 
+```
+## Tuned RF 1000
+
+```{r}
+set.seed(123)
+BAG_1000 <- randomForest(clr_1000$Clade ~ . ,
+                     data = clr_1000[,-c(2)], 
+                     mtry = 4, 
+                     ntree = 18)
+
+BAG_1000
+```
+
+
+## RandomForest 500 ASVs
+
+```{r}
+set.seed(123)
+BAG_500 <- randomForest(clr_500$Clade ~ . , # clade is factor
+                     data = clr_500[,-c(2)])
+
+BAG_500
+
+
+############################## optimal number of trees
+(BAG_500$err.rate |> as.data.frame())$OOB |> which.min() # 450
+
+############################## find optimal mtry
+set.seed(3)
+# training set
+Zt <- sample(nrow(clr_500), .85*nrow(clr_500)) # 236 rows is 85 %
+
+tuneRF(clr_500[Zt,-c(1:2)], # minus Clade and sample ID
+       clr_500[Zt,]$Clade, 
+       mtryStart = 2) # 
+```
+
+## Tuned RF 500
+```{r}
+set.seed(123)
+BAG_t_500 <- randomForest(clr_500$Clade ~ . ,
+                     data = clr_500[,-c(2)], 
+                     mtry = 4, 
+                     ntree = 450)
+
+BAG_t_500
+```
+
+
+## RandomForest 200 ASVs
+```{r}
+set.seed(123)
+BAG_200 <- randomForest(clr_200$Clade ~ . , # clade is factor
+                     data = clr_200[,-c(2)])
+
+BAG_200
+
+############################## optimal number of trees
+(BAG_200$err.rate |> as.data.frame())$OOB |> which.min() # 483
+
+############################## find optimal mtry
+set.seed(3)
+# training set
+Zt <- sample(nrow(clr_200), .85*nrow(clr_200)) # 236 rows is 85 %
+
+tuneRF(clr_200[Zt,-c(1:2)], # minus Clade and sample ID
+       clr_200[Zt,]$Clade, 
+       mtryStart = 2) # 
+
+```
+
+
+## Tuned RF 200
+```{r}
+set.seed(123)
+BAG_t_200 <- randomForest(clr_200$Clade ~ . ,
+                     data = clr_200[,-c(2)], 
+                     mtry = 16, 
+                     ntree = 153)
+
+BAG_t_200
+```
+
+
+# Boosted Trees
+```{r}
+library(gbm)
+```
+
+```{r, boost-data-set-up}
+# gbm needs integer not factor
+clr_1000 %>% 
+  mutate(Clade = as.integer(Clade)-1) -> boost_data_1000
+
+# gbm needs integer not factor
+clr_500 %>% 
+  mutate(Clade = as.integer(Clade)-1) -> boost_data_500
+
+# gbm needs integer not factor
+clr_200 %>% 
+  mutate(Clade = as.integer(Clade)-1) -> boost_data_200
+
+
+# training testing split - not needed with CV
+# set.seed(1234)
+# Z <- sample(nrow(boost_data_1000), .85*nrow(boost_data_1000))
+# boost_train <- boost_data_1000[Z,]
+# boost_test <- boost_data_1000[-Z,]
+```
+
+# Boosted 1000
+```{r}
+
+
+# whole data set with CV folds
+set.seed(123)
+boost_model_1000 <- gbm(boost_data_1000$Clade ~ . , # same data as above
+              data = boost_data_1000[, -c(2)], 
+              n.trees = 5000, 
+              class.stratify.cv = TRUE,
+              cv.folds = 10,
+              train.fraction = .85,
+              distribution = "bernoulli") # logistic classification
+
+
+## hold out dataset of 15 % with CV in training
+# boost_model_1000 <- gbm(boost_train$Clade ~ . , # same data as above
+#               data = boost_train[, -c(2)], 
+#               n.trees = 5000, 
+#               cv.folds = 10,
+#               train.fraction = .85,
+#               distribution = "bernoulli") # logistic classification
+
+boost_model_1000 # best was 60 in training, best 23 in testing
+
+base::plot(boost_model_1000)
+# same as 
+#plot.gbm(boost_model_1000)
+
+# auto shows ntrees = 23 for testing set
+relative.influence(boost_model_1000) %>% 
+  as.data.frame() %>%
+  arrange(-.) %>% 
+  head()
+
+best_iter <- gbm.perf(boost_model_1000, method = "test") # 23 had min testing error
+
+1 - boost_model_1000$cv.error[best_iter]
+```
+
+- black is training error
+- red is validation error 
+- blue is optimal number of trees
+
+# Boosted 500
+
+```{r}
+
+# whole data set with CV folds
+set.seed(123)
+boost_model_500 <- gbm(boost_data_500$Clade ~ . , # same data as above
+              data = boost_data_500[, -c(2)], 
+              n.trees = 5000, 
+              class.stratify.cv = TRUE,
+              cv.folds = 10,
+              train.fraction = .85,
+              distribution = "bernoulli") # logistic classification
+
+boost_model_500 # best was 60 in training, best 23 in testing
+
+base::plot(boost_model_500)
+
+# auto shows ntrees = 23 for testing set
+relative.influence(boost_model_500) %>% 
+  as.data.frame() %>%
+  arrange(-.) %>% 
+  head()
+
+best_iter <- gbm.perf(boost_model_500, method = "test") # 23 had min testing error
+
+1 - boost_model_500$cv.error[best_iter]
+```
+
+
+# Boosted 200 
+
+```{r}
+# whole data set with CV folds
+set.seed(123)
+boost_model_200 <- gbm(boost_data_200$Clade ~ . , # same data as above
+              data = boost_data_200[, -c(2)], 
+              n.trees = 5000, 
+              class.stratify.cv = TRUE,
+              cv.folds = 10,
+              train.fraction = .85,
+              distribution = "bernoulli") # logistic classification
+
+boost_model_200 # best was   in training, best 50 in testing
+
+base::plot(boost_model_200)
+
+# auto shows ntrees = 23 for testing set
+relative.influence(boost_model_200) %>% 
+  as.data.frame() %>%
+  arrange(-.) %>% 
+  head()
+
+best_iter <- gbm.perf(boost_model_200, method = "test") # 23 had min testing error
+
+1 - boost_model_200$cv.error[best_iter]
+```
+
