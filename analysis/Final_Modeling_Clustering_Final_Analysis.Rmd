@@ -13,9 +13,8 @@ suppressMessages(library(tidyverse))
 ## Revised Final Analysis Combining Ridge 200 Modeling Predictors, Cluster Assignments & Bacteria Taxonomy
 
 ```{r}
-# read in modeling results from Revised Ridge & Lasso Modeling Rmd file
+# read in modeling results from Final Ridge & Lasso Modeling Revised Rmd file
 readRDS("../output/ridge_coefs.rds") -> ridge_coefs
-readRDS("../output/lasso_coefs.rds") -> lasso_coefs
 # read in cluster assignments from K-means in 'coseq' files
 read_csv("../output/species_P_cluster_assignments.csv") -> clusters_P
 read_csv("../output/species_S_cluster_assignments.csv") -> clusters_S
@@ -24,7 +23,7 @@ read_delim("../data/Files/16S_tax.txt") -> bac_tax
 
 ```
 
-
+## Join the coefficients with the cluster assignments for each species and combine
 ```{r, joins-ridge-200}
 ################### combine ridge 200 predictors with cluster assignments and taxonomy
 # species P
@@ -52,14 +51,38 @@ bind_rows(
 predictors_p_df, 
 predictors_s_df) -> predictors_clade_c_ridge # genus or family are best per client.
 
-
-predictors_clade_c_ridge %>% # 400 because the k-means was done for each species separately
-  arrange(-abs(s1)) # in order of coefficient absolute value: high to low
+write_csv(predictors_clade_c_ridge, "../output/predictors_clade_c_ridge.csv")
 ```
 
 
+```{r}
+predictors_clade_c_ridge %>% # 400 because the k-means was done for each species separately
+  arrange(-abs(s1)) %>% # in order of coefficient absolute value: high to low
+  # since cluster assignments were by species, the join added double columns for the second coral species
+  # filtering here gives the unique list
+ # filter(coral_species == "P") %>% # 
+  rename(coef = s1) %>% 
+ # filter(coef > 0) %>% 
+  #filter(predictor %in% c("ASV1321", "ASV3327" ))
+ # filter(seed12_run4 == 1 | seed12_run4==6 ) %>%  # or for species S:   seed12_run4==6
+  select(predictor, Family, seed12_run4)
+```
 
+## What is the Order or Family that's most present?
+```{r}
 
+predictors_clade_c_ridge %>% # 400 because the k-means was done for each species separately
+  arrange(-abs(s1)) %>% 
+  filter(coral_species == "P") %>% 
+  rename(coef = s1) %>% 
+  group_by(Family) %>% 
+  summarise(n = n()) %>% 
+  arrange(-n, Family) %>% 
+  mutate(proportion = n/sum(n))
+```
+- About 19 % are of the family Alteromonadaceae, the most present family in the ridge coeficients list. Since the 200 ASVs used for this model were from PCA results
+
+## Plots with varying taxonomies
 ```{r, plots-ridge-200}
 
 # predictor cluster assignments from ridge 200
@@ -143,3 +166,10 @@ predictors_clade_c_ridge %>%
   guides(colour=guide_legend(nrow=30)) +
   facet_wrap(~paste("Species ", coral_species)) 
 ```
+
+
+# ROC for recommended model
+```{r}
+ridge_coefs[3]
+```
+

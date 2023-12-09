@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 suppressMessages(library(tidyverse))
 ```
 
+### Note:  Clade C PCA is towards the bottom 
+
 ## Read in Transformed Data for Principal Components Analysis
 - Centered log ratio = CLR
 - CLR data transformation recommended by client
@@ -345,7 +347,7 @@ clr_clade_c %>%
   select(-(zero_summed_clade_c$name)) -> clr_clade_c_non_zero
 ```
 
-## PCA - Clade C
+# PCA - Clade C
 ```{r}
 stats::prcomp(clr_clade_c_non_zero, 
               scale. = T) -> pca_clade_c
@@ -383,24 +385,10 @@ bind_cols(
   janitor::row_to_names(1) %>% 
   ggplot(aes(x = as.numeric(CumProp) , y =  as.numeric(IndivProp))) +
   geom_point() +
-  ggtitle("Clade C - PCA Results: Proportion of Variance", 
-          "Vertical lines indicate Lasso number of non-zero coefficients\nLambda.1se = 4 predictors, Lambda.min = 23 predictors") +
+  ggtitle("Clade C - PCA Results: Proportion of Variance") +
   xlab("Cumulative Proportion") +
   ylab("Proportion of Variance per Principal Component") +
-  theme_bw() +
-  geom_vline( xintercept = 0.175, colour = "red") +
-  geom_vline(xintercept = 0.5, color = "blue") #+ 
-  #ggrepel::geom_text_repel() +
-  # annotate("text", 
-  #          label = "Lasso ",
-  #          x = .2, y = .15, 
-  #          size = 8, 
-  #          colour = "red") +
-  #  annotate("text", 
-  #          label = "Lasso ",
-  #          x = .52, y = .15, 
-  #          size = 8, 
-  #          colour = "blue")
+  theme_bw() 
 ```
 
 
@@ -423,7 +411,7 @@ fviz_contrib(pca_clade_c,
              choice = "var", 
              axes = 1, 
              top = 400, 
-             title = "Clade C Top Contributing ASVs in Dimension 1\nRed dashed line indicates average contribution", 
+             title = "Clade C Top 400 Contributing ASVs in Dimension 1\nRed dashed line indicates average contribution\nDrop off is around 150", 
              xtickslab.rt = 0,
              #ylim(0.4, 0.7),
              ggtheme = theme_minimal())
@@ -455,7 +443,7 @@ fviz_pca_var(pca_clade_c,
              title = "Clade C Variables - PCA"
              ) 
 ```
-- Obtain List of first 1000 ASVs for testing Logistic Regression
+- Obtain List of first 1000 ASVs for Logistic Regression
 ```{r}
 # Access the loadings of the first two principal components
 loadings <- pca_clade_c$rotation[, 1:2]

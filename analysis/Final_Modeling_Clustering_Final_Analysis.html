@@ -361,9 +361,8 @@ Analysis</h1>
 <div id="revised-final-analysis-combining-ridge-200-modeling-predictors-cluster-assignments-bacteria-taxonomy" class="section level2">
 <h2>Revised Final Analysis Combining Ridge 200 Modeling Predictors,
 Cluster Assignments &amp; Bacteria Taxonomy</h2>
-<pre class="r"><code># read in modeling results from Revised Ridge &amp; Lasso Modeling Rmd file
+<pre class="r"><code># read in modeling results from Final Ridge &amp; Lasso Modeling Revised Rmd file
 readRDS(&quot;../output/ridge_coefs.rds&quot;) -&gt; ridge_coefs
-readRDS(&quot;../output/lasso_coefs.rds&quot;) -&gt; lasso_coefs
 # read in cluster assignments from K-means in &#39;coseq&#39; files
 read_csv(&quot;../output/species_P_cluster_assignments.csv&quot;) -&gt; clusters_P</code></pre>
 <pre><code>## Rows: 5889 Columns: 4
@@ -392,6 +391,10 @@ read_delim(&quot;../data/Files/16S_tax.txt&quot;) -&gt; bac_tax</code></pre>
 ## 
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+<div id="join-the-coefficients-with-the-cluster-assignments-for-each-species-and-combine" class="section level2">
+<h2>Join the coefficients with the cluster assignments for each species
+and combine</h2>
 <pre class="r"><code>################### combine ridge 200 predictors with cluster assignments and taxonomy
 # species P
 ridge_coefs[3] %&gt;% # Ridge 200
@@ -418,25 +421,62 @@ bind_rows(
 predictors_p_df, 
 predictors_s_df) -&gt; predictors_clade_c_ridge # genus or family are best per client.
 
+write_csv(predictors_clade_c_ridge, &quot;../output/predictors_clade_c_ridge.csv&quot;)
 
 predictors_clade_c_ridge %&gt;% # 400 because the k-means was done for each species separately
-  arrange(-abs(s1)) # in order of coefficient absolute value: high to low</code></pre>
-<pre><code>## # A tibble: 400 × 13
-##        s1 predictor seed23_run2 seed105_run3 seed12_run4 Kingdom  Phylum   Class
-##     &lt;dbl&gt; &lt;chr&gt;           &lt;dbl&gt;        &lt;dbl&gt;       &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;
-##  1  0.947 ASV1321             3            6           1 Bacteria Proteob… Gamm…
-##  2  0.947 ASV1321            10            3           6 Bacteria Proteob… Gamm…
-##  3 -0.888 ASV2269             3            6           1 Bacteria Proteob… Gamm…
-##  4 -0.888 ASV2269            12            5           4 Bacteria Proteob… Gamm…
-##  5 -0.657 ASV4059             3            6           1 Bacteria Proteob… Gamm…
-##  6 -0.657 ASV4059            10            3           6 Bacteria Proteob… Gamm…
-##  7 -0.605 ASV4407             3            6           1 Bacteria Proteob… Gamm…
-##  8 -0.605 ASV4407            10            3           6 Bacteria Proteob… Gamm…
-##  9 -0.442 ASV7680             3            6           1 Bacteria Proteob… Alph…
-## 10 -0.442 ASV7680            10            3           6 Bacteria Proteob… Alph…
-## # ℹ 390 more rows
-## # ℹ 5 more variables: Order &lt;chr&gt;, Family &lt;chr&gt;, Genus &lt;chr&gt;, Species &lt;chr&gt;,
-## #   coral_species &lt;chr&gt;</code></pre>
+  arrange(-abs(s1)) %&gt;% # in order of coefficient absolute value: high to low
+  # since cluster assignments were by species, the join added double columns for the second coral species
+  # filtering here gives the unique list
+  filter(coral_species == &quot;P&quot;) %&gt;% # 
+  rename(coef = s1) %&gt;% 
+  select(coef, predictor)</code></pre>
+<pre><code>## # A tibble: 200 × 2
+##      coef predictor
+##     &lt;dbl&gt; &lt;chr&gt;    
+##  1  0.947 ASV1321  
+##  2 -0.888 ASV2269  
+##  3 -0.657 ASV4059  
+##  4 -0.605 ASV4407  
+##  5 -0.442 ASV7680  
+##  6 -0.386 ASV6267  
+##  7 -0.290 ASV3532  
+##  8  0.276 ASV1445  
+##  9 -0.275 ASV9936  
+## 10 -0.273 ASV5987  
+## # ℹ 190 more rows</code></pre>
+</div>
+<div id="what-is-the-order-or-family-thats-most-present" class="section level2">
+<h2>What is the Order or Family that’s most present?</h2>
+<pre class="r"><code>predictors_clade_c_ridge %&gt;% # 400 because the k-means was done for each species separately
+  arrange(-abs(s1)) %&gt;% 
+  filter(coral_species == &quot;P&quot;) %&gt;% 
+  rename(coef = s1) %&gt;% 
+  group_by(Family) %&gt;% 
+  summarise(n = n()) %&gt;% 
+  arrange(-n, Family) %&gt;% 
+  mutate(proportion = n/sum(n))</code></pre>
+<pre><code>## # A tibble: 62 × 3
+##    Family                     n proportion
+##    &lt;chr&gt;                  &lt;int&gt;      &lt;dbl&gt;
+##  1 Alteromonadaceae          37      0.185
+##  2 Flavobacteriaceae         24      0.12 
+##  3 &lt;NA&gt;                      17      0.085
+##  4 Rhodobacteraceae          15      0.075
+##  5 Pseudoalteromonadaceae    10      0.05 
+##  6 Saccharospirillaceae       8      0.04 
+##  7 Alcanivoracaceae1          5      0.025
+##  8 Saprospiraceae             5      0.025
+##  9 Moraxellaceae              4      0.02 
+## 10 Acholeplasmataceae         3      0.015
+## # ℹ 52 more rows</code></pre>
+<ul>
+<li>About 19 % are of the family Alteromonadaceae, the most present
+family in the ridge coeficients list. Since the 200 ASVs used for this
+model were from PCA results</li>
+</ul>
+</div>
+<div id="plots-with-varying-taxonomies" class="section level2">
+<h2>Plots with varying taxonomies</h2>
 <pre class="r"><code># predictor cluster assignments from ridge 200
 # facet wrap for coral species
 predictors_clade_c_ridge %&gt;% 
