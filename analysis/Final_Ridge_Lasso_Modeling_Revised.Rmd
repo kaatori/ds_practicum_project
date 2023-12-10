@@ -256,10 +256,11 @@ RidgeCV_200
 - It does not seem to be helping to redo with cv.glmnet when the error rate is going up. What if non-ASV variables are included? Would the error rates go down? 
 
 
-# Other Variables
+# Other Variables - Revised & Final Modeling Here
 - Including other variables from original data to see if it can give better error rates
 - This is the section mentioned at the very beginning where the reader may use as a starting point to review revsied results.
 ```{r redo-data-set}
+library(compositions)
 # read in data with other variables 
 read_csv("../output/balanced_df.csv") %>% 
   # take out reef because it is not specific
@@ -274,7 +275,7 @@ balanced_w_other_vars %>%
 # clr for 1000
 bind_cols(
   balanced_1000[,1:5],
-  clr(balanced_1000[,6:1005]) 
+  compositions::clr(balanced_1000[,6:1005]) 
 ) -> clr_1000
 
 
@@ -392,6 +393,7 @@ coef(R_clr_500, s = "lambda.min") %>%
 
 # Ridge 200 
 ```{r}
+library(glmnet)
 # Create a formula for model.matrix
 formula <- as.formula(paste("Clade ~ .", sep = "", collapse = ""), 
                       env = environment(clr_200)) # 200
@@ -429,6 +431,12 @@ coef(R_clr_200, s = "lambda.min") %>%
 ```
 
 - Wow, the error rate went down drastically to 16.2 % for lambda.min with a standard error for lambda.min that is slightly larger. This was using more than just the ASV columns. The model includes region, species, and ITS2_count. 
+
+```{r}
+# save modeling results
+write_rds(R_clr_200, "../output/ridge_200_model.rds")
+```
+
 
 # Lasso Modeling with other variables included
 # Lasso 1000

@@ -168,8 +168,5 @@ predictors_clade_c_ridge %>%
 ```
 
 
-# ROC for recommended model
-```{r}
-ridge_coefs[3]
-```
+
 
