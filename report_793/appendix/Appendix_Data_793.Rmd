@@ -65,7 +65,7 @@ library(tidyverse)
 | 
 | 
 
-### Lambda.min Values with Misclassiffication (Error) Rates
+### Table 1: Lambda.min Values with Misclassiffication (Error) Rates
 
 Method | Error Rate 1000 ASVs | Lambda.min  | Error Rate 500 ASVs | Lambda.min | Error Rate 200 ASVs | Lambda.min    |
 ------ | ---------|--------- | -------|------- | --------|------- | 
@@ -112,7 +112,7 @@ predictors_clade_c_ridge %>% # 400 because the k-means was done for each species
 \blandscape
 
 
-### First 10 Ridge 200 Model Predictors (in order of coefficient absolute value)
+### Tabel 2: First 10 Ridge 200 Model Predictors (in order of coefficient absolute value)
 Please see `Final_Modeling_Clustering_Final_Analysis` in `analysis` folder for complete list on [GitHub](https://github.com/kaatori/ds_practicum_project/tree/main). 
 
 ```{r, echo=F, include=T, out.extra='angle=90'}

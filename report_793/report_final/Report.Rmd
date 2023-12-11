@@ -84,7 +84,7 @@ Cluster assignments reveal several ASVs were repeatedly clustered together with 
 
 **Figure 1: Species with different genetic profiles behaved differently when clustering**
 
-![ *Sepcies P has more consistent clustering results than Species S. Image credit: Buitrago-Lopez, Cardenas, et al. (2023).* ](../images/seeds_jaccard.png)
+![ *Species P has more consistent clustering results than Species S. Image credit: Buitrago-Lopez, Cardenas, et al. (2023).* ](../images/seeds_jaccard.png)
 
 
 ### Part II: Supervised Modeling
@@ -115,7 +115,7 @@ Boosted Trees        | Both   | 22.5 %   | 23.5 %   |  29.3 %  | K folds = 10   
 
 
 
-Ridge and Lasso performed overall better than tree methods, which was unexpected as tree methods usually handle non-linear data well. The Ridge model utilizing 200 ASV columns resulted in teh ideal recommended model due to its lower error rate and ability to retain all 200 coefficients, however small. As Ridge does not cancel out any coefficients, it is preferred for interpretability of the maximum number of associated  predictors for Clade C. Although the Lasso 1000 model in Table 1 lists a slightly lower error rate of 15.1 %, the difference of 0.4 % is not big enough to prefer the shorter list of variables selected under the Lasso method as it canceled out all but 17 ASVs. This is not to say that these 17 should not be reviewed; however, in keeping with the request of maximum variable contribution or interpretability, the Ridge method is recommended. 
+Ridge and Lasso performed overall better than tree methods, which was unexpected as tree methods usually handle non-linear data well. The Ridge model utilizing 200 ASV columns resulted in the ideal recommended model due to its lower error rate and ability to retain all 200 coefficients, however small. As Ridge does not cancel out any coefficients, it is preferred for interpretability of the maximum number of associated  predictors for Clade C. Although the Lasso 1000 model in Table 1 lists a slightly lower error rate of 15.1 %, the difference of 0.4 % is not big enough to prefer the shorter list of variables selected under the Lasso method as it canceled out all but 17 ASVs. This is not to say that these 17 should not be reviewed; however, in keeping with the request of maximum variable contribution or interpretability, the Ridge method is recommended. 
 
 The Ridge 200 predictors may be important contributors for Clade C. Many of the predictors are presently not assigned a taxonomy of family, genus or species; therefore, Figure 2 (below) illustrates the predictors' taxonomy in terms of Order. Approximately 19 % of the bacteria predictors are of the family *Alteromonadaceae*. Table 2 in the Appendix contains the first ten coefficients. 
 
@@ -123,7 +123,7 @@ The Ridge 200 predictors may be important contributors for Clade C. Many of the 
 KEY FINDINGS FROM THE COMBINATION OF PART I CLUSTERING WITH PART II MODEL PREDICTORS 
 \end{center}
 
-The Ridge 200 model’s ASVs as predictors were predominantly clustered in one group for both species. For example, ASV1321	(Family *Alteromonadaceae*), 	ASV3327	(Family *Saprospiraceae*), ASV9424	(Family *Rickettsiaceae*), and ASV3075	(Family *Mitochondria*) are positively associated with Clade C from the modeling results and clustered together three out of three times in both coral species, cluster 1 in Species P, cluster 6 in Species S. Selected details of cluster assignments for all seed runs may be found in the attached Appendix, as well as complete details and modeling results on [GitHub](). Next steps should include a review the ASVs from the Ridge 200 model's predictors in relation to their cluster assignments to see if the results make biologic sense.\newline
+The Ridge 200 model’s ASVs as predictors were predominantly clustered in one group for both species. For example, ASV1321	(Family *Alteromonadaceae*), 	ASV3327	(Family *Saprospiraceae*), ASV9424	(Family *Rickettsiaceae*), and ASV3075	(Family *Mitochondria*) are positively associated with Clade C from the modeling results and clustered together three out of three times in both coral species, cluster 1 in Species P (seed 12 run), cluster 6 in Species S (seed 12 run). Selected details of cluster assignments for all seed runs may be found in the attached Appendix, as well as complete details and modeling results on [GitHub](https://github.com/kaatori/ds_practicum_project). Next steps should include a review the ASVs from the Ridge 200 model's predictors in relation to their cluster assignments to see if the results make biologic sense.\newline
 
 
 \newpage
@@ -131,7 +131,7 @@ The Ridge 200 model’s ASVs as predictors were predominantly clustered in one g
 **Figure 2: Cluster Assignments of Ridge 200 Predictors with Taxonomy: Order**
 
 
-![*Figure 2: Cluster 1 for Species P and Cluster 6 for Species S in the Seed 12 K-means run contain most of the Ridge 200 model's predictors.*](../images/clusters_predictors_order.png){width=59%}
+![*Cluster 1 for Species P and Cluster 6 for Species S in the Seed 12 K-means run contain most of the Ridge 200 model's predictors.*](../images/clusters_predictors_order.png){width=59%}
 
 
 
