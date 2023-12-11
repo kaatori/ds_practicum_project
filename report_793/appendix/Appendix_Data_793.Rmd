@@ -1,0 +1,148 @@
+---
+title: "Appendix to Data 793 Practicum Report, *Exploration & Experimentation of Applying Machine Learning Methods to Coral Microbiome Data*"
+author: "Katherine Cassandra Sperow, MS Data Science Candidate, American University"
+date: "December 11, 2023"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+urlcolor: blue
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+# Unsupervised Modeling Settings
+
+**K-means** 
+
+(See also `Coseq_P.Rmd` and `Coseq_S.Rmd` on [GitHub](https://github.com/kaatori/ds_practicum_project/tree/main))
+
+| coseq(p_bac_num,                    
+|      K= 2:50, 
+|      transformation = "logclr",
+|      model = "kmeans",
+|      nstart = 100, 
+|      iter.max = 1000
+|      )
+
+
+
+
+# Supervised Modeling Settings 
+
+(See also `Final_Ridge_Lasso_Modeling_Revised.Rmd` on [GitHub](https://github.com/kaatori/ds_practicum_project/tree/main))
+
+**Ridge Modeling **
+
+| cv.glmnet(X[,-1],                   # model matrix, take out intercept
+|             y,                      # target label 0,1
+|             alpha = 0,              # Ridge, L2 Norm
+|             type.measure = "class", # misclassification error
+|             nfolds = 10,            # K-fold cross-validation
+|             family = "binomial"     # logistic
+|             )
+
+**Lasso Modeling **
+
+| cv.glmnet(X[,-1],                    # model matrix, take out intercept
+|              y,                      # target label 0.1
+|              alpha = 1,              # Lasso, L1 Norm
+|              type.measure = "class", # misclassification error
+|              nfolds = 10,            # K-fold cross-validation
+|              family = "binomial"     # logistic
+|             )
+
+
+
+| 
+| 
+
+### Lambda.min Values with Misclassiffication (Error) Rates
+
+Method | Error Rate 1000 ASVs | Lambda.min  | Error Rate 500 ASVs | Lambda.min | Error Rate 200 ASVs | Lambda.min    |
+------ | ---------|--------- | -------|------- | --------|------- | 
+Ridge  |  28.0 %  | 4.464    | 28.8 % | 3.706  |  15.5 % | 0.6629  | 
+Lasso  |  15.1 %  | 0.05015  | 15.8 % | 0.04569 |  15.5 % | 0.01186 | 
+
+
+### Plots
+
+```{r, echo=F, fig.cap="Correlations of the Top 50 ASVs for all observations (left) vs. Clade C (right).", fig.show='hold', out.width="49%", out.height="30%", fig.align='center'}
+knitr::include_graphics(c("../images/corr_plot_top_50.png", "../images/clade_c_corr.png"))
+
+```
+
+
+```{r, echo=F, fig.show='hold', fig.cap="Bacteria data visualized with a t-SNE plot indicating Clade C observations as 1 in orange and non-clade-C as 0 in blue.", out.width="69%", out.height="40%", fig.align='center'}
+knitr::include_graphics(c("../images/tSNE_clade_c.png"))
+
+```
+
+
+## Cluster Assignments 
+- Note: Predictor rows are doubled to show the cluster assignment results per species for the first forty coefficients. Complete data frame of joined predictors, cluster assignments and taxonomy in `Final_Modeling_Clustering_Final_Analysis` in `analysis` folder on [GitHub](https://github.com/kaatori/ds_practicum_project/tree/main). 
+
+```{r, echo=F, include=T, out.extra='angle=90'}
+# - Import joined file of predictors with cluster assignments and taxonomy from `Final_Modeling_Clustering_Final_Analysis.Rmd`
+# - Since K-means was done by species, the joins resulted in the predictors having one row for each species. Filtering for one species gives the unique coefficients. 
+
+
+suppressMessages(readr::read_csv("../imports/predictors_clade_c_ridge.csv")) -> predictors_clade_c_ridge
+
+predictors_clade_c_ridge %>% # 400 because the k-means was done for each species 
+  arrange(-abs(s1)) %>% # in order of coefficient absolute value: high to low
+ # filter(coral_species == "P") %>% # filtering here gives the unique list
+  rename(coef = s1) %>% 
+  mutate(coef = round(coef, 3)) %>% 
+  head(n = 40) %>% 
+  select(coef, predictor, starts_with("seed"), coral_species) %>% 
+  knitr::kable()
+```
+
+
+\newpage
+\blandscape
+
+
+### First 10 Ridge 200 Model Predictors (in order of coefficient absolute value)
+Please see `Final_Modeling_Clustering_Final_Analysis` in `analysis` folder for complete list on [GitHub](https://github.com/kaatori/ds_practicum_project/tree/main). 
+
+```{r, echo=F, include=T, out.extra='angle=90'}
+# - Import joined file of predictors with cluster assignments and taxonomy from `Final_Modeling_Clustering_Final_Analysis.Rmd`
+# - Since K-means was done by species, the joins resulted in the predictors having one row for each species. Filtering for one species gives the unique coefficients. 
+
+
+suppressMessages(readr::read_csv("../imports/predictors_clade_c_ridge.csv")) -> predictors_clade_c_ridge
+
+predictors_clade_c_ridge %>% # 400 because the k-means was done for each species 
+  arrange(-abs(s1)) %>% # in order of coefficient absolute value: high to low
+  filter(coral_species == "P") %>% # filtering here gives the unique list
+  rename(coef = s1) %>% 
+  mutate(coef = round(coef, 3)) %>% 
+  head(n = 10) %>% 
+  select(-coral_species, -c(starts_with("seed"))) %>% 
+  knitr::kable()
+```
+\elandscape
+
+
+
+
+
+
+
+
+
+
+
+
+
+
